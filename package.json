@@ -1,0 +1,14 @@
+{
+  "name": "open-immersive-translate",
+  "version": "1.4.0",
+  "private": true,
+  "scripts": {
+    "test": "jest --forceExit",
+    "test:coverage": "jest --coverage --forceExit"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0"
+  },
+  "license": "AGPL-3.0-only"
+}

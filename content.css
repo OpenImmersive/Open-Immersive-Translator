@@ -1,0 +1,135 @@
+/* 语灵灵 Content Styles */
+
+/* 翻译段落 */
+.yll-tr {
+  display: block;
+  margin: 4px 0 12px 0;
+  padding: 6px 10px;
+  color: #1a5276;
+  font-size: 0.96em;
+  line-height: 1.65;
+  border-left: 3px solid #5dade2;
+  background: rgba(93, 173, 226, 0.06);
+  border-radius: 0 4px 4px 0;
+  font-family: inherit;
+  word-wrap: break-word;
+  transition: background 0.2s;
+}
+
+.yll-tr:hover {
+  background: rgba(93, 173, 226, 0.12);
+}
+
+/* 深色模式 */
+@media (prefers-color-scheme: dark) {
+  .yll-tr {
+    color: #85c1e9;
+    background: rgba(93, 173, 226, 0.08);
+    border-left-color: #2e86c1;
+  }
+
+  .yll-tr:hover {
+    background: rgba(93, 173, 226, 0.14);
+  }
+}
+
+/* 划词翻译弹窗 */
+#yll-sel-popup {
+  position: absolute;
+  z-index: 2147483647;
+  max-width: 340px;
+  min-width: 160px;
+  background: #fff;
+  border: 1px solid #d0d7de;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #24292f;
+  display: none;
+  overflow: hidden;
+}
+
+.yll-popup-loading,
+.yll-popup-done {
+  padding: 10px 14px;
+}
+
+.yll-popup-text {
+  color: #1f2d3d;
+  word-wrap: break-word;
+}
+
+.yll-popup-footer {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid #eaecef;
+  font-size: 12px;
+  color: #8b949e;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.yll-popup-footer a {
+  color: #0969da;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.yll-popup-footer a:hover {
+  text-decoration: underline;
+}
+
+.yll-spin {
+  display: inline-block;
+  animation: yll-rotate 0.8s linear infinite;
+  color: #0969da;
+}
+
+@keyframes yll-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 深色模式弹窗 */
+@media (prefers-color-scheme: dark) {
+  #yll-sel-popup {
+    background: #22272e;
+    border-color: #444c56;
+    color: #adbac7;
+  }
+
+  .yll-popup-text {
+    color: #cdd9e5;
+  }
+
+  .yll-popup-footer {
+    border-top-color: #373e47;
+    color: #636e7b;
+  }
+
+  .yll-popup-footer a {
+    color: #539bf5;
+  }
+}
+
+/* 进度条 */
+#yll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  z-index: 2147483646;
+  background: transparent;
+  display: none;
+}
+
+#yll-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #5dade2, #1a5276);
+  transition: width 0.3s ease;
+  border-radius: 0 2px 2px 0;
+}

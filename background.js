@@ -5,6 +5,13 @@
 
 const api = typeof browser !== 'undefined' ? browser : chrome;
 
+// 敏感信息脱敏模块（可选功能，默认关闭）。Chrome MV3 service worker 用
+// importScripts 加载；Firefox 事件页由 manifest background.scripts 先行加载
+// （见 build-store.mjs）。加载失败只是功能不可用，不影响翻译。
+if (typeof YLSensitive === 'undefined' && typeof importScripts === 'function') {
+  try { importScripts('sensitive-mask.js'); } catch (e) { console.warn('sensitive-mask.js 加载失败', e); }
+}
+
 // Storage 兼容层（Firefox用Promise，Chrome用callback包装）
 function storageGet(keys) {
   if (typeof browser !== 'undefined') return browser.storage.local.get(keys);
@@ -44,17 +51,30 @@ api.runtime.onMessage.addListener((message, sender, sendResponse) => {
 async function translate({ text, engine, targetLang, sourceLang = 'auto' }) {
   if (!text || !text.trim()) return '';
 
-  const { apiKeys = {} } = await storageGet('apiKeys');
+  const { apiKeys = {}, sensitiveMask = false } = await storageGet(['apiKeys', 'sensitiveMask']);
 
-  switch (engine) {
-    case 'google':     return translateGoogle(text, targetLang, sourceLang);
-    case 'mymemory':  return translateMyMemory(text, targetLang, sourceLang);
-    case 'deepl':     return translateDeepL(text, targetLang, sourceLang, apiKeys.deepl);
-    case 'openai':    return translateOpenAI(text, targetLang, sourceLang, apiKeys.openai);
-    case 'deepseek':  return translateDeepSeek(text, targetLang, sourceLang, apiKeys.deepseek);
-    case 'libretranslate': return translateLibre(text, targetLang, sourceLang, apiKeys.libretranslate_url);
-    default:          return translateGoogle(text, targetLang, sourceLang);
+  // 脱敏：发送前在本地把敏感信息换成占位符，翻译返回后还原
+  let masked = null;
+  if (sensitiveMask && typeof YLSensitive !== 'undefined') {
+    masked = YLSensitive.maskSensitive(text);
+    text = masked.masked;
   }
+
+  let result;
+  switch (engine) {
+    case 'google':     result = await translateGoogle(text, targetLang, sourceLang); break;
+    case 'mymemory':  result = await translateMyMemory(text, targetLang, sourceLang); break;
+    case 'deepl':     result = await translateDeepL(text, targetLang, sourceLang, apiKeys.deepl); break;
+    case 'openai':    result = await translateOpenAI(text, targetLang, sourceLang, apiKeys.openai); break;
+    case 'deepseek':  result = await translateDeepSeek(text, targetLang, sourceLang, apiKeys.deepseek); break;
+    case 'libretranslate': result = await translateLibre(text, targetLang, sourceLang, apiKeys.libretranslate_url); break;
+    default:          result = await translateGoogle(text, targetLang, sourceLang);
+  }
+
+  if (masked && masked.entities.length) {
+    result = YLSensitive.restoreSensitive(result, masked.entities);
+  }
+  return result;
 }
 
 // ===== Google Translate（非官方免费接口，无需Key）=====
@@ -169,6 +189,10 @@ async function translateDeepSeek(text, targetLang, sourceLang, apiKey) {
 // OpenAI兼容接口通用实现
 async function callOpenAICompat(endpoint, model, apiKey, text, targetLang) {
   const langName = LANG_NAMES[targetLang] || targetLang;
+  // 脱敏占位符必须原样穿过 LLM，否则无法还原
+  const piiNote = text.includes('__PII_')
+    ? ' The text contains placeholders like __PII_EMAIL_1__; keep them EXACTLY unchanged in the output.'
+    : '';
 
   const resp = await fetch(endpoint, {
     method: 'POST',
@@ -181,7 +205,7 @@ async function callOpenAICompat(endpoint, model, apiKey, text, targetLang) {
       messages: [
         {
           role: 'system',
-          content: `You are a professional translator. Translate the following text to ${langName}. Output only the translation, no explanations, no quotes.`
+          content: `You are a professional translator. Translate the following text to ${langName}. Output only the translation, no explanations, no quotes.${piiNote}`
         },
         { role: 'user', content: text }
       ],

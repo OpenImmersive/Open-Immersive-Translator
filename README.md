@@ -15,3 +15,13 @@ This project focuses on:
 * Accessibility for non-technical users
 
 The vision is to make AI-powered translation more trustworthy, easier to use, and safer for everyone.
+
+## License
+
+This project is licensed under the GNU Affero General Public License v3.0 only (AGPL-3.0-only).
+
+You may use, study, modify, and distribute this project under the terms of the AGPL-3.0-only license.
+
+If you modify this project, distribute it, or make it available as part of a network service, you must make the corresponding source code available under the same license.
+
+For commercial closed-source use, please contact the project maintainer for a separate commercial license.

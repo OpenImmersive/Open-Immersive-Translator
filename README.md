@@ -16,6 +16,49 @@ This project focuses on:
 
 The vision is to make AI-powered translation more trustworthy, easier to use, and safer for everyone.
 
+## Features
+
+- **Bilingual, in place** — side-by-side translation on the page you are reading. No copy-paste, no uploading your content to someone else's website. Toggle with `Alt+T`.
+- **Privacy by architecture** — translation requests go directly from your browser to the engine you choose. No middle server, no proxy, no telemetry, zero data collection ([privacy policy](PRIVACY.md)).
+- **Sensitive-data masking (Beta)** — optional, off by default. Emails, phone numbers, bank card numbers (Luhn-validated), national ID numbers, and API keys (`sk-…`, `ghp_…`, `AKIA…`, JWT, …) are detected **locally**, replaced with placeholders before the text is sent to any engine, and restored locally afterwards. The originals never leave your browser. See [`sensitive-mask.js`](sensitive-mask.js).
+- **Transparent engines, BYOK** — free out of the box (Google, MyMemory, LibreTranslate — self-hostable); bring your own key for DeepL / OpenAI / DeepSeek. Keys are stored in `storage.local` only.
+- **14 target languages**, Chrome (MV3 service worker) and Firefox (MV3 event page) supported.
+
+## Install
+
+**From source (Chrome / Edge):**
+
+1. Clone this repository
+2. Open `chrome://extensions`, enable *Developer mode*
+3. *Load unpacked* → select the repository folder
+
+**From source (Firefox):** in `manifest.json`, replace the `background` block with `{"scripts": ["sensitive-mask.js", "background.js"]}`, then load via `about:debugging` → *Load Temporary Add-on*.
+
+Store listings (Chrome Web Store / Firefox Add-ons) are pending review.
+
+## How sensitive-data masking works
+
+```
+"Contact admin@example.com or call 13812345678"
+        │  local detection (regex + checksums)
+        ▼
+"Contact __PII_EMAIL_1__ or call __PII_PHONE_1__"   →  translation engine
+        │  translated text returns
+        ▼
+"联系 admin@example.com 或致电 13812345678"            ←  local restore
+```
+
+Detection is precision-first: card numbers must pass a Luhn check, Chinese national IDs must pass the mod-11 checksum, so financial figures, years, and thousand-separated numbers in ordinary text are never touched. Restore tolerates the common ways engines mangle placeholders (case changes, inserted spaces, dropped trailing underscores). Enable it in the extension options page.
+
+## Development
+
+```bash
+npm install
+npm test        # jest — unit + integration (masking round-trips through translate())
+```
+
+No build step: the extension loads directly from source. `background.js` routes all engines through a single `translate()` entry point; `sensitive-mask.js` is a dependency-free UMD module.
+
 ## License
 
 This project is licensed under the GNU Affero General Public License v3.0 only (AGPL-3.0-only).

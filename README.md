@@ -1,3 +1,8 @@
+# Open Immersive Translate
+
+[![CI](https://github.com/OpenImmersive/Open-Immersive-Translate/actions/workflows/ci.yml/badge.svg)](https://github.com/OpenImmersive/Open-Immersive-Translate/actions/workflows/ci.yml)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
+
 ## About This Project
 
 This project started from a simple need: many friends around me rely on immersive translation tools in their daily work and study, but they also care deeply about data security and privacy.

@@ -20,7 +20,7 @@
   background: rgba(93, 173, 226, 0.12);
 }
 
-/* 深色模式 */
+/* 深色适配：①系统深色模式 ②按元素实际背景判定的 .yll-tr-dark（网站自带深色主题） */
 @media (prefers-color-scheme: dark) {
   .yll-tr {
     color: #85c1e9;
@@ -31,6 +31,16 @@
   .yll-tr:hover {
     background: rgba(93, 173, 226, 0.14);
   }
+}
+
+.yll-tr.yll-tr-dark {
+  color: #85c1e9;
+  background: rgba(93, 173, 226, 0.10);
+  border-left-color: #2e86c1;
+}
+
+.yll-tr.yll-tr-dark:hover {
+  background: rgba(93, 173, 226, 0.16);
 }
 
 /* 划词翻译弹窗 */

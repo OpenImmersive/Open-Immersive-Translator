@@ -83,6 +83,12 @@
       }
       return false;
     }
+
+    // 右键菜单「翻译选中文字」→ 复用划词气泡
+    if (msg.type === 'translateSelection') {
+      translateCurrentSelection();
+      return false;
+    }
   });
 
   // ===== 快捷键 Alt+T =====
@@ -108,7 +114,11 @@
     if (!selectionEnabled) return;
     // 点击了自己的popup则忽略
     if (selPopup && selPopup.contains(e.target)) return;
+    translateCurrentSelection();
+  }
 
+  // 翻译当前选中文字并弹气泡（划词自动触发 + 右键菜单显式触发共用）
+  async function translateCurrentSelection() {
     const sel = window.getSelection();
     if (!sel || sel.isCollapsed) {
       hidePopup();
@@ -235,7 +245,7 @@
   // 状态与设置同步：hover/输入框走 state.engine/targetLang，先从存储初始化，再随改动更新。
   // 注意：必须显式列出所有键——getSettings() 只取 targetLang/engine，读不到行为开关。
   storageGet(['targetLang', 'engine', 'hoverTranslate', 'hoverKey',
-    'selectionTranslate', 'inputTranslate', 'inputTargetLang']).then(s => {
+    'selectionTranslate', 'inputTranslate', 'inputTargetLang', 'autoTranslateSites']).then(s => {
     if (s.engine) state.engine = s.engine;
     if (s.targetLang) state.targetLang = s.targetLang;
     if (s.hoverTranslate === false) hoverEnabled = false;
@@ -243,6 +253,12 @@
     if (s.selectionTranslate === false) selectionEnabled = false;
     if (s.inputTranslate === false) inputEnabled = false;
     if (typeof s.inputTargetLang === 'string') inputTargetLang = s.inputTargetLang;
+    // 自动翻译此网站：命中名单则整页翻译（等动态内容稍稳后触发）
+    if (Array.isArray(s.autoTranslateSites) && s.autoTranslateSites.includes(location.hostname)) {
+      setTimeout(() => {
+        if (!state.isTranslated && !state.isTranslating) translatePage();
+      }, 800);
+    }
   });
   if (api.storage && api.storage.onChanged) {
     api.storage.onChanged.addListener((changes, area) => {
@@ -468,11 +484,30 @@
 
     const div = document.createElement('div');
     div.className = 'yll-tr';
+    // 按元素实际背景深浅适配（网站深色主题时 prefers-color-scheme 可能仍是 light）
+    if (isDarkBg(el)) div.classList.add('yll-tr-dark');
     div.setAttribute('data-yll-inject', '1');
     div.setAttribute('data-yll-ui', 'true');
     div.textContent = translation;
 
     el.insertAdjacentElement('afterend', div);
+  }
+
+  // 向上找到第一个不透明背景，判断其明度是否偏暗（用于译文配色自适应）
+  function isDarkBg(el) {
+    let node = el;
+    for (let i = 0; node && i < 8; i++, node = node.parentElement) {
+      const bg = getComputedStyle(node).backgroundColor;
+      const m = bg && bg.match(/rgba?\(([^)]+)\)/);
+      if (!m) continue;
+      const parts = m[1].split(',').map(Number);
+      const a = parts.length > 3 ? parts[3] : 1;
+      if (a < 0.5) continue; // 透明背景，继续往上找
+      const [r, g, b] = parts;
+      const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      return lum < 0.5;
+    }
+    return false;
   }
 
   function removeTranslations() {

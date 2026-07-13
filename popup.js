@@ -5,22 +5,28 @@ const api = typeof browser !== 'undefined' ? browser : chrome;
 const btnTranslate = document.getElementById('btnTranslate');
 const selLang = document.getElementById('selLang');
 const swHover = document.getElementById('swHover');
+const swAutoSite = document.getElementById('swAutoSite');
 const statusDot = document.getElementById('statusDot');
 const statusText = document.getElementById('statusText');
 
 let currentTab = null;
+let currentHost = '';
 let engine = 'google'; // 引擎收进「更多设置」，popup 只读取、不展示
 
 // ===== 初始化 =====
 
 async function init() {
-  const data = await getStorage(['targetLang', 'engine', 'hoverTranslate']);
+  const data = await getStorage(['targetLang', 'engine', 'hoverTranslate', 'autoTranslateSites']);
   selLang.value = data.targetLang || 'zh-CN';
   engine = data.engine || 'google';
   swHover.checked = data.hoverTranslate !== false; // 默认开
 
   const [tab] = await api.tabs.query({ active: true, currentWindow: true });
   currentTab = tab;
+  try { currentHost = tab && tab.url ? new URL(tab.url).hostname : ''; } catch { currentHost = ''; }
+  const sites = Array.isArray(data.autoTranslateSites) ? data.autoTranslateSites : [];
+  swAutoSite.checked = !!currentHost && sites.includes(currentHost);
+  swAutoSite.disabled = !currentHost;
 
   try {
     const resp = await api.tabs.sendMessage(tab.id, { type: 'getStatus' });
@@ -54,6 +60,20 @@ btnTranslate.addEventListener('click', async () => {
 
 selLang.addEventListener('change', () => setStorage({ targetLang: selLang.value }));
 swHover.addEventListener('change', () => setStorage({ hoverTranslate: swHover.checked }));
+
+// 总是翻译此网站：增删当前 host；勾选后立即翻译当前页
+swAutoSite.addEventListener('change', async () => {
+  if (!currentHost) return;
+  const { autoTranslateSites } = await getStorage(['autoTranslateSites']);
+  const sites = new Set(Array.isArray(autoTranslateSites) ? autoTranslateSites : []);
+  if (swAutoSite.checked) {
+    sites.add(currentHost);
+    if (currentTab) api.tabs.sendMessage(currentTab.id, { type: 'translatePage', targetLang: selLang.value, engine }).catch(() => {});
+  } else {
+    sites.delete(currentHost);
+  }
+  await setStorage({ autoTranslateSites: [...sites] });
+});
 
 // ===== 更多设置 =====
 

@@ -28,6 +28,15 @@ api.commands.onCommand.addListener(async (command) => {
   }
 });
 
+// 首次安装 → 打开新手引导页
+if (api.runtime.onInstalled) {
+  api.runtime.onInstalled.addListener((details) => {
+    if (details.reason === 'install') {
+      api.tabs.create({ url: api.runtime.getURL('welcome.html') }).catch(() => {});
+    }
+  });
+}
+
 // ===== 消息监听 =====
 
 api.runtime.onMessage.addListener((message, sender, sendResponse) => {

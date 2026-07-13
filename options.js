@@ -5,12 +5,23 @@ const api = typeof browser !== 'undefined' ? browser : chrome;
 // ===== 加载设置 =====
 
 async function loadSettings() {
-  const data = await getStorage(['targetLang', 'engine', 'apiKeys', 'sensitiveMask']);
+  const data = await getStorage([
+    'targetLang', 'engine', 'apiKeys', 'sensitiveMask',
+    'hoverTranslate', 'hoverKey', 'selectionTranslate',
+    'inputTranslate', 'inputTargetLang'
+  ]);
 
+  // 常用
   document.getElementById('defLang').value = data.targetLang || 'zh-CN';
+  document.getElementById('swHover').checked = data.hoverTranslate !== false;      // 默认开
+  document.getElementById('selHoverKey').value = data.hoverKey || 'Alt';
+  document.getElementById('swSelection').checked = data.selectionTranslate !== false; // 默认开
+  document.getElementById('swInput').checked = data.inputTranslate !== false;      // 默认开
+  document.getElementById('selInputLang').value = data.inputTargetLang || 'en';
+
+  // 高级
   document.getElementById('defEngine').value = data.engine || 'google';
   document.getElementById('maskSensitive').checked = !!data.sensitiveMask;
-
   const keys = data.apiKeys || {};
   document.getElementById('keyDeepL').value = keys.deepl || '';
   document.getElementById('keyDeepSeek').value = keys.deepseek || '';
@@ -23,6 +34,11 @@ async function loadSettings() {
 document.getElementById('btnSave').addEventListener('click', async () => {
   const settings = {
     targetLang: document.getElementById('defLang').value,
+    hoverTranslate: document.getElementById('swHover').checked,
+    hoverKey: document.getElementById('selHoverKey').value,
+    selectionTranslate: document.getElementById('swSelection').checked,
+    inputTranslate: document.getElementById('swInput').checked,
+    inputTargetLang: document.getElementById('selInputLang').value,
     engine: document.getElementById('defEngine').value,
     sensitiveMask: document.getElementById('maskSensitive').checked,
     apiKeys: {
@@ -55,13 +71,12 @@ document.querySelectorAll('.btn-show').forEach(btn => {
   });
 });
 
-// ===== Storage 工具（Firefox用Promise，Chrome用callback包装）=====
+// ===== Storage 工具 =====
 
 function getStorage(keys) {
   if (typeof browser !== 'undefined') return browser.storage.local.get(keys);
   return new Promise(resolve => chrome.storage.local.get(keys, resolve));
 }
-
 function setStorage(items) {
   if (typeof browser !== 'undefined') return browser.storage.local.set(items);
   return new Promise(resolve => chrome.storage.local.set(items, resolve));

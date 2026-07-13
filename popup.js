@@ -4,30 +4,28 @@ const api = typeof browser !== 'undefined' ? browser : chrome;
 
 const btnTranslate = document.getElementById('btnTranslate');
 const selLang = document.getElementById('selLang');
-const selEngine = document.getElementById('selEngine');
+const swHover = document.getElementById('swHover');
 const statusDot = document.getElementById('statusDot');
 const statusText = document.getElementById('statusText');
 
 let currentTab = null;
+let engine = 'google'; // 引擎收进「更多设置」，popup 只读取、不展示
 
 // ===== 初始化 =====
 
 async function init() {
-  // 加载保存的设置
-  const { targetLang = 'zh-CN', engine = 'google' } = await getStorage(['targetLang', 'engine']);
-  selLang.value = targetLang;
-  selEngine.value = engine;
+  const data = await getStorage(['targetLang', 'engine', 'hoverTranslate']);
+  selLang.value = data.targetLang || 'zh-CN';
+  engine = data.engine || 'google';
+  swHover.checked = data.hoverTranslate !== false; // 默认开
 
-  // 获取当前标签页
   const [tab] = await api.tabs.query({ active: true, currentWindow: true });
   currentTab = tab;
 
-  // 查询内容脚本状态
   try {
     const resp = await api.tabs.sendMessage(tab.id, { type: 'getStatus' });
     updateUI(resp);
   } catch {
-    // 内容脚本尚未注入（如 about:, chrome: 等特殊页面）
     setStatus('dot-off', '此页面不支持翻译');
     btnTranslate.disabled = true;
   }
@@ -37,23 +35,13 @@ async function init() {
 
 btnTranslate.addEventListener('click', async () => {
   if (!currentTab) return;
-
   const targetLang = selLang.value;
-  const engine = selEngine.value;
-
-  // 保存设置
-  await setStorage({ targetLang, engine });
+  await setStorage({ targetLang });
 
   btnTranslate.disabled = true;
   setStatus('dot-loading', '翻译中，请稍候…');
-
   try {
-    const resp = await api.tabs.sendMessage(currentTab.id, {
-      type: 'translatePage',
-      targetLang,
-      engine
-    });
-
+    const resp = await api.tabs.sendMessage(currentTab.id, { type: 'translatePage', targetLang, engine });
     updateUI(resp);
   } catch (err) {
     setStatus('dot-off', '翻译失败: ' + err.message);
@@ -62,12 +50,12 @@ btnTranslate.addEventListener('click', async () => {
   }
 });
 
-// ===== 引擎/语言变更时自动保存 =====
+// ===== 设置变更自动保存 =====
 
 selLang.addEventListener('change', () => setStorage({ targetLang: selLang.value }));
-selEngine.addEventListener('change', () => setStorage({ engine: selEngine.value }));
+swHover.addEventListener('change', () => setStorage({ hoverTranslate: swHover.checked }));
 
-// ===== 设置页 =====
+// ===== 更多设置 =====
 
 document.getElementById('btnOptions').addEventListener('click', (e) => {
   e.preventDefault();
@@ -75,38 +63,39 @@ document.getElementById('btnOptions').addEventListener('click', (e) => {
   window.close();
 });
 
+// ===== PDF 翻译：跳网站（保留排版 / 学术论文模式）=====
+
+document.getElementById('btnPdf').addEventListener('click', (e) => {
+  e.preventDefault();
+  api.tabs.create({ url: 'https://pdf.openimmersive.ai/' });
+  window.close();
+});
+
 // ===== UI 更新 =====
 
 function updateUI(resp) {
-  if (!resp) {
-    setStatus('dot-off', '无法连接到页面');
-    return;
-  }
+  if (!resp) { setStatus('dot-off', '无法连接到页面'); return; }
 
   if (resp.isTranslating) {
     setStatus('dot-loading', `翻译中… ${resp.translatedCount || 0}/${resp.totalCount || 0}`);
     btnTranslate.disabled = true;
     return;
   }
-
   if (resp.isTranslated || resp.status === 'done') {
     const count = resp.count || resp.translatedCount || 0;
     setStatus('dot-on', `已翻译 ${count} 个段落`);
-    btnTranslate.textContent = '取消翻译';
+    btnTranslate.textContent = '恢复原文';
     btnTranslate.classList.add('active');
     return;
   }
-
   if (resp.status === 'removed') {
     setStatus('dot-off', '已恢复原文');
-    btnTranslate.textContent = '翻译当前页面';
+    btnTranslate.textContent = '翻译此页';
     btnTranslate.classList.remove('active');
     return;
   }
-
-  // 未翻译状态
-  setStatus('dot-off', '准备就绪 · Alt+T 快捷键');
-  btnTranslate.textContent = '翻译当前页面';
+  setStatus('dot-off', '准备就绪');
+  btnTranslate.textContent = '翻译此页';
   btnTranslate.classList.remove('active');
 }
 
@@ -114,25 +103,15 @@ function setStatus(dotClass, text) {
   statusDot.className = 'status-dot';
   if (dotClass === 'dot-on') statusDot.classList.add('on');
   if (dotClass === 'dot-loading') statusDot.classList.add('loading');
-  // DOM API 构建（不用 innerHTML）：把 Alt+T 包成 <kbd>，其余走文本节点。
-  statusText.textContent = '';
-  text.split('Alt+T').forEach((p, i) => {
-    if (i > 0) {
-      const kbd = document.createElement('kbd');
-      kbd.textContent = 'Alt+T';
-      statusText.appendChild(kbd);
-    }
-    if (p) statusText.appendChild(document.createTextNode(p));
-  });
+  statusText.textContent = text;
 }
 
-// ===== Storage 工具（Firefox用Promise，Chrome用callback包装）=====
+// ===== Storage 工具 =====
 
 function getStorage(keys) {
   if (typeof browser !== 'undefined') return browser.storage.local.get(keys);
   return new Promise(resolve => chrome.storage.local.get(keys, resolve));
 }
-
 function setStorage(items) {
   if (typeof browser !== 'undefined') return browser.storage.local.set(items);
   return new Promise(resolve => chrome.storage.local.set(items, resolve));

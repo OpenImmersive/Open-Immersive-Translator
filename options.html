@@ -10,237 +10,116 @@
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, '微软雅黑', sans-serif;
       font-size: 14px;
-      color: #1f2d3d;
-      background: #f6f8fa;
+      color: #1c1917;
+      background: #fafaf9;
       min-height: 100vh;
     }
 
     .page-header {
-      background: linear-gradient(135deg, #1a5276, #2980b9);
+      background: linear-gradient(135deg, #0f766e, #0d9488);
       color: #fff;
       padding: 20px 0;
     }
+    .container { max-width: 680px; margin: 0 auto; padding: 0 20px; }
+    .page-header .container { display: flex; align-items: center; gap: 12px; }
+    .page-header img { width: 34px; height: 34px; border-radius: 7px; }
+    .page-header h1 { font-size: 20px; font-weight: 700; }
+    .page-header p { font-size: 12px; opacity: 0.85; }
 
-    .container {
-      max-width: 680px;
-      margin: 0 auto;
-      padding: 0 20px;
-    }
-
-    .page-header .container {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .logo {
-      font-size: 28px;
-    }
-
-    .page-header h1 {
-      font-size: 20px;
-      font-weight: 700;
-    }
-
-    .page-header p {
-      font-size: 12px;
-      opacity: 0.8;
-    }
-
-    /* 卡片 */
     .card {
-      background: #fff;
-      border: 1px solid #d0d7de;
-      border-radius: 8px;
-      margin-top: 20px;
-      overflow: hidden;
+      background: #fff; border: 1px solid #e7e5e4; border-radius: 10px;
+      margin-top: 18px; overflow: hidden;
     }
-
     .card-header {
-      padding: 14px 20px;
-      background: #f6f8fa;
-      border-bottom: 1px solid #d0d7de;
-      font-weight: 600;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+      padding: 14px 20px; background: #f5f5f4; border-bottom: 1px solid #e7e5e4;
+      font-weight: 600; font-size: 14px;
     }
+    .card-body { padding: 20px; }
 
-    .card-body {
-      padding: 20px;
+    .form-group { margin-bottom: 18px; }
+    .form-group:last-child { margin-bottom: 0; }
+
+    label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: #374151; }
+    .label-hint { font-size: 11px; color: #78716c; font-weight: 400; margin-left: 6px; }
+
+    input[type="text"], input[type="password"], select {
+      width: 100%; padding: 8px 12px; border: 1px solid #d6d3d1; border-radius: 6px;
+      font-size: 13px; color: #1c1917; background: #fff; outline: none; transition: border-color 0.15s;
     }
+    input:focus, select:focus { border-color: #0d9488; box-shadow: 0 0 0 3px rgba(13,148,136,0.12); }
 
-    /* 表单 */
-    .form-group {
-      margin-bottom: 18px;
-    }
-
-    .form-group:last-child {
-      margin-bottom: 0;
-    }
-
-    label {
-      display: block;
-      font-size: 13px;
-      font-weight: 500;
-      margin-bottom: 5px;
-      color: #374151;
-    }
-
-    .label-hint {
-      font-size: 11px;
-      color: #6b7280;
-      font-weight: 400;
-      margin-left: 6px;
-    }
-
-    input[type="text"],
-    input[type="password"],
-    select {
-      width: 100%;
-      padding: 8px 12px;
-      border: 1px solid #d0d7de;
-      border-radius: 6px;
-      font-size: 13px;
-      color: #1f2d3d;
-      background: #fff;
-      outline: none;
-      transition: border-color 0.15s;
-    }
-
-    input[type="text"]:focus,
-    input[type="password"]:focus,
-    select:focus {
-      border-color: #2980b9;
-      box-shadow: 0 0 0 3px rgba(41, 128, 185, 0.1);
-    }
-
-    .input-group {
-      display: flex;
-      gap: 8px;
-    }
-
-    .input-group input {
-      flex: 1;
-    }
-
+    .input-group { display: flex; gap: 8px; }
+    .input-group input { flex: 1; }
     .btn-show {
-      padding: 8px 12px;
-      background: #f6f8fa;
-      border: 1px solid #d0d7de;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 13px;
-      color: #444;
-      white-space: nowrap;
+      padding: 8px 12px; background: #f5f5f4; border: 1px solid #d6d3d1; border-radius: 6px;
+      cursor: pointer; font-size: 13px; color: #44403c; white-space: nowrap;
     }
+    .btn-show:hover { background: #e7e5e4; }
 
-    .btn-show:hover { background: #e9ecef; }
-
-    .hint {
-      margin-top: 5px;
-      font-size: 11px;
-      color: #6b7280;
-    }
-
-    .hint a {
-      color: #0969da;
-      text-decoration: none;
-    }
-
+    .hint { margin-top: 6px; font-size: 11px; color: #78716c; line-height: 1.6; }
+    .hint a { color: #0d9488; text-decoration: none; }
     .hint a:hover { text-decoration: underline; }
 
-    /* 保存按钮 */
+    /* 开关行 */
+    .toggle-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 10px 0; border-bottom: 1px solid #f5f5f4;
+    }
+    .toggle-row:last-child { border-bottom: none; }
+    .toggle-row .t-label { font-size: 13px; font-weight: 500; color: #374151; }
+    .toggle-row .t-desc { font-size: 11px; color: #a8a29e; margin-top: 2px; }
+    .toggle-row .t-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .toggle-row select { width: auto; min-width: 96px; }
+
+    .switch { position: relative; display: inline-block; width: 42px; height: 24px; flex-shrink: 0; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; inset: 0; cursor: pointer; background: #d6d3d1; border-radius: 24px; transition: .18s; }
+    .slider::before { content: ''; position: absolute; height: 18px; width: 18px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: .18s; }
+    input:checked + .slider { background: #0d9488; }
+    input:checked + .slider::before { transform: translateX(18px); }
+
+    /* 高级折叠 */
+    details.card > summary {
+      list-style: none; cursor: pointer; padding: 14px 20px; background: #f5f5f4;
+      font-weight: 600; font-size: 14px; display: flex; align-items: center; justify-content: space-between;
+    }
+    details.card > summary::-webkit-details-marker { display: none; }
+    details.card > summary::after { content: '▸'; color: #a8a29e; transition: transform .15s; }
+    details.card[open] > summary::after { transform: rotate(90deg); }
+    details.card > summary + * { border-top: 1px solid #e7e5e4; }
+    .sub-block { padding: 16px 0; border-bottom: 1px solid #f5f5f4; }
+    .sub-block:last-child { border-bottom: none; padding-bottom: 0; }
+    .sub-title { font-weight: 600; font-size: 13px; margin-bottom: 10px; }
+
     .save-bar {
-      position: sticky;
-      bottom: 0;
-      background: #fff;
-      border-top: 1px solid #d0d7de;
-      padding: 14px 20px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-top: 20px;
+      position: sticky; bottom: 0; background: #fff; border-top: 1px solid #e7e5e4;
+      padding: 14px 0; margin-top: 20px;
     }
-
+    .save-bar .container { display: flex; align-items: center; gap: 12px; }
     .btn-save {
-      padding: 9px 24px;
-      background: #2980b9;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s;
+      padding: 9px 26px; background: #0d9488; color: #fff; border: none; border-radius: 6px;
+      font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s;
     }
+    .btn-save:hover { background: #0f766e; }
+    .save-msg { font-size: 13px; color: #16a34a; display: none; }
 
-    .btn-save:hover { background: #1a5276; }
-    .btn-save:active { background: #154360; }
-
-    .save-msg {
-      font-size: 13px;
-      color: #27ae60;
-      display: none;
-    }
-
-    /* 隐私信息栏 */
     .privacy-info {
-      background: #e8f5e9;
-      border: 1px solid #a5d6a7;
-      border-radius: 6px;
-      padding: 12px 14px;
-      font-size: 12px;
-      color: #2e7d32;
-      line-height: 1.6;
+      background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 8px;
+      padding: 12px 14px; font-size: 12px; color: #0f766e; line-height: 1.6;
     }
+    .privacy-info strong { display: block; margin-bottom: 4px; }
 
-    .privacy-info strong {
-      display: block;
-      margin-bottom: 4px;
-    }
-
-    /* 引擎状态徽章 */
-    .engine-badge {
-      display: inline-block;
-      padding: 1px 7px;
-      border-radius: 10px;
-      font-size: 10px;
-      font-weight: 600;
-      margin-left: 6px;
-    }
-
-    .badge-free {
-      background: #d1fae5;
-      color: #065f46;
-    }
-
-    .badge-byok {
-      background: #fef3c7;
-      color: #92400e;
-    }
-
-    /* 页脚 */
     .page-footer {
-      max-width: 680px;
-      margin: 16px auto 30px;
-      padding: 0 20px;
-      font-size: 11px;
-      color: #8b949e;
-      text-align: center;
+      max-width: 680px; margin: 16px auto 30px; padding: 0 20px;
+      font-size: 11px; color: #a8a29e; text-align: center;
     }
-
-    .page-footer a {
-      color: #0969da;
-      text-decoration: none;
-    }
+    .page-footer a { color: #0d9488; text-decoration: none; }
   </style>
 </head>
 <body>
   <div class="page-header">
     <div class="container">
-      <span class="logo">🌐</span>
+      <img src="icons/icon-48.png" alt="" />
       <div>
         <h1>OpenImmersive Translator 设置</h1>
         <p>开源 · 隐私优先 · 双语翻译</p>
@@ -250,23 +129,12 @@
 
   <div class="container">
 
-    <!-- 隐私声明 -->
-    <div class="card" style="margin-top:20px">
-      <div class="card-body">
-        <div class="privacy-info">
-          <strong>🔒 隐私保证</strong>
-          所有翻译请求<strong>直接</strong>从您的浏览器发往翻译服务商，无任何中间服务器、无代理、无数据收集。
-          API Key 仅保存在本地浏览器，不会上传至任何地方。代码完全开源可审计。
-        </div>
-      </div>
-    </div>
-
-    <!-- 默认翻译设置 -->
+    <!-- 常用设置 -->
     <div class="card">
-      <div class="card-header">⚙️ 翻译设置</div>
+      <div class="card-header">常用设置</div>
       <div class="card-body">
         <div class="form-group">
-          <label>默认目标语言</label>
+          <label>翻译成（目标语言）</label>
           <select id="defLang">
             <option value="zh-CN">简体中文</option>
             <option value="zh-TW">繁体中文</option>
@@ -277,129 +145,144 @@
             <option value="de">Deutsch（德语）</option>
             <option value="es">Español（西班牙语）</option>
             <option value="ru">Русский（俄语）</option>
-            <option value="ar">العربية（阿拉伯语）</option>
             <option value="pt">Português（葡萄牙语）</option>
             <option value="it">Italiano（意大利语）</option>
           </select>
         </div>
-        <div class="form-group">
-          <label>默认翻译引擎</label>
+
+        <div class="toggle-row">
+          <div>
+            <div class="t-label">悬停翻译</div>
+            <div class="t-desc">按住触发键，鼠标划过段落即逐段翻译</div>
+          </div>
+          <div class="t-right">
+            <select id="selHoverKey">
+              <option value="Alt">按住 Alt</option>
+              <option value="Control">按住 Ctrl</option>
+              <option value="Shift">按住 Shift</option>
+              <option value="off">关闭触发键</option>
+            </select>
+            <label class="switch"><input type="checkbox" id="swHover" /><span class="slider"></span></label>
+          </div>
+        </div>
+
+        <div class="toggle-row">
+          <div>
+            <div class="t-label">划词翻译</div>
+            <div class="t-desc">选中任意文字，弹出译文气泡</div>
+          </div>
+          <div class="t-right">
+            <label class="switch"><input type="checkbox" id="swSelection" /><span class="slider"></span></label>
+          </div>
+        </div>
+
+        <div class="toggle-row">
+          <div>
+            <div class="t-label">输入框翻译</div>
+            <div class="t-desc">在输入框按 Alt+Enter，把你写的内容译成下面选的语言（写外语用）</div>
+          </div>
+          <div class="t-right">
+            <select id="selInputLang">
+              <option value="en">译成英语</option>
+              <option value="ja">译成日语</option>
+              <option value="ko">译成韩语</option>
+              <option value="fr">译成法语</option>
+              <option value="de">译成德语</option>
+              <option value="es">译成西语</option>
+              <option value="zh-CN">译成中文</option>
+            </select>
+            <label class="switch"><input type="checkbox" id="swInput" /><span class="slider"></span></label>
+          </div>
+        </div>
+
+        <p class="hint" style="margin-top:14px">
+          快捷键：<b>Alt+T</b> 翻译/恢复整页 · 选中文字即翻 · 输入框内 <b>Alt+Enter</b> 译成外语
+        </p>
+      </div>
+    </div>
+
+    <!-- 高级设置（默认折叠） -->
+    <details class="card">
+      <summary>高级设置（引擎、API Key、脱敏）</summary>
+      <div class="card-body">
+
+        <div class="sub-block">
+          <div class="sub-title">翻译引擎</div>
           <select id="defEngine">
-            <optgroup label="免费引擎（无需API Key）">
-              <option value="google">Google Translate ⭐ 推荐</option>
-              <option value="mymemory">MyMemory（500词/次限制）</option>
-              <option value="libretranslate">LibreTranslate（需配置实例地址）</option>
+            <optgroup label="免费引擎（无需 API Key）">
+              <option value="google">Google 翻译 ⭐ 推荐（默认）</option>
+              <option value="mymemory">MyMemory（备用）</option>
+              <option value="libretranslate">LibreTranslate（开源，需实例地址）</option>
             </optgroup>
-            <optgroup label="高质量引擎（需配置API Key）">
-              <option value="deepl">DeepL（质量最高，免费版50万字/月）</option>
-              <option value="deepseek">DeepSeek（AI翻译，成本极低）</option>
+            <optgroup label="高质量引擎（自带 API Key）">
+              <option value="deepl">DeepL（质量最高，免费 50 万字/月）</option>
+              <option value="deepseek">DeepSeek（AI 翻译，成本极低）</option>
               <option value="openai">OpenAI GPT-4o-mini</option>
             </optgroup>
           </select>
+          <p class="hint">默认用免费的 Google，够日常使用。想要更高质量再在下面填对应 Key 并切换引擎。</p>
         </div>
-      </div>
-    </div>
 
-    <!-- DeepL API Key -->
-    <div class="card">
-      <div class="card-header">
-        🔑 DeepL API Key
-        <span class="engine-badge badge-byok">BYOK</span>
-        <span class="engine-badge badge-free">免费5M字/月</span>
-      </div>
-      <div class="card-body">
-        <div class="form-group">
-          <label>DeepL Auth Key</label>
+        <div class="sub-block">
+          <div class="sub-title">DeepL API Key <span class="label-hint">免费 50 万字/月</span></div>
           <div class="input-group">
-            <input type="password" id="keyDeepL" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx:fx" />
+            <input type="password" id="keyDeepL" placeholder="xxxxxxxx-xxxx-...:fx" />
             <button class="btn-show" data-target="keyDeepL">显示</button>
           </div>
-          <p class="hint">
-            在 <a href="https://www.deepl.com/pro-api" target="_blank">deepl.com</a> 免费注册获取（Free Plan：每月50万字符）。
-            Key以":fx"结尾为免费版。
-          </p>
+          <p class="hint">在 <a href="https://www.deepl.com/pro-api" target="_blank" rel="noopener">deepl.com</a> 免费注册获取，以 ":fx" 结尾为免费版。</p>
         </div>
-      </div>
-    </div>
 
-    <!-- DeepSeek API Key -->
-    <div class="card">
-      <div class="card-header">
-        🔑 DeepSeek API Key
-        <span class="engine-badge badge-byok">BYOK</span>
-      </div>
-      <div class="card-body">
-        <div class="form-group">
-          <label>DeepSeek API Key</label>
+        <div class="sub-block">
+          <div class="sub-title">DeepSeek API Key</div>
           <div class="input-group">
             <input type="password" id="keyDeepSeek" placeholder="sk-..." />
             <button class="btn-show" data-target="keyDeepSeek">显示</button>
           </div>
-          <p class="hint">
-            在 <a href="https://platform.deepseek.com" target="_blank">platform.deepseek.com</a> 获取。
-            翻译成本约 $0.001/千字，是最经济的AI翻译引擎。
-          </p>
+          <p class="hint">在 <a href="https://platform.deepseek.com" target="_blank" rel="noopener">platform.deepseek.com</a> 获取，成本约 $0.001/千字。</p>
         </div>
-      </div>
-    </div>
 
-    <!-- OpenAI API Key -->
-    <div class="card">
-      <div class="card-header">
-        🔑 OpenAI API Key
-        <span class="engine-badge badge-byok">BYOK</span>
-      </div>
-      <div class="card-body">
-        <div class="form-group">
-          <label>OpenAI API Key</label>
+        <div class="sub-block">
+          <div class="sub-title">OpenAI API Key</div>
           <div class="input-group">
             <input type="password" id="keyOpenAI" placeholder="sk-..." />
             <button class="btn-show" data-target="keyOpenAI">显示</button>
           </div>
-          <p class="hint">
-            在 <a href="https://platform.openai.com" target="_blank">platform.openai.com</a> 获取。
-            使用 gpt-4o-mini 模型，翻译质量好，成本约 $0.003/千字。
-          </p>
+          <p class="hint">在 <a href="https://platform.openai.com" target="_blank" rel="noopener">platform.openai.com</a> 获取，使用 gpt-4o-mini。</p>
         </div>
-      </div>
-    </div>
 
-    <!-- LibreTranslate -->
-    <div class="card">
-      <div class="card-header">
-        🏠 LibreTranslate（开源可自托管）
-        <span class="engine-badge badge-free">开源</span>
-      </div>
-      <div class="card-body">
-        <div class="form-group">
-          <label>LibreTranslate 实例地址 <span class="label-hint">（留空使用公共实例）</span></label>
+        <div class="sub-block">
+          <div class="sub-title">LibreTranslate 实例地址 <span class="label-hint">（留空用公共实例）</span></div>
           <input type="text" id="libreUrl" placeholder="https://libretranslate.com" />
-          <p class="hint">
-            自托管可获得最高隐私保护。参考
-            <a href="https://github.com/LibreTranslate/LibreTranslate" target="_blank">github.com/LibreTranslate</a>
-            部署。公共实例可能不稳定。
-          </p>
+          <p class="hint">开源、可自托管，隐私最高。见 <a href="https://github.com/LibreTranslate/LibreTranslate" target="_blank" rel="noopener">LibreTranslate</a>。</p>
         </div>
-      </div>
-    </div>
 
-    <!-- 敏感信息脱敏 -->
-    <div class="card">
-      <div class="card-header">
-        🛡️ 敏感信息脱敏（Beta）
-        <span class="engine-badge badge-free">本地处理</span>
+        <div class="sub-block">
+          <div class="toggle-row" style="padding:0;border:none">
+            <div>
+              <div class="t-label">敏感信息脱敏（Beta）</div>
+              <div class="t-desc">发送前本地打码邮箱/电话/卡号/证件/API Key，译后自动还原</div>
+            </div>
+            <div class="t-right">
+              <label class="switch"><input type="checkbox" id="maskSensitive" /><span class="slider"></span></label>
+            </div>
+          </div>
+          <p class="hint">检测与还原全部在浏览器本地完成，敏感原文不会发往翻译服务商。极少数情况引擎改写占位符会导致该处还原失败（不泄露信息），如遇异常可关闭。</p>
+        </div>
+
+        <div class="sub-block">
+          <div class="sub-title">PDF 翻译</div>
+          <p class="hint">整份 PDF 保留排版翻译（含学术论文公式）在网站上进行：<a href="https://pdf.openimmersive.ai/" target="_blank" rel="noopener">pdf.openimmersive.ai →</a></p>
+        </div>
+
       </div>
+    </details>
+
+    <!-- 隐私声明 -->
+    <div class="card">
       <div class="card-body">
-        <div class="form-group">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:500">
-            <input type="checkbox" id="maskSensitive" />
-            发送翻译前自动打码敏感信息
-          </label>
-          <p class="hint">
-            在本地识别邮箱、电话、银行卡号、身份证号、API Key，替换为占位符后再发给翻译引擎，
-            翻译完成后自动还原。检测与还原全部在浏览器本地完成，敏感内容原文不会发往任何翻译服务商。
-            极少数情况下引擎可能改写占位符导致该处还原失败（不泄露信息，只影响该处显示），如遇异常可关闭此项。
-          </p>
+        <div class="privacy-info">
+          <strong>🔒 隐私保证</strong>
+          所有翻译请求直接从你的浏览器发往翻译服务商，无中间服务器、无代理、无数据收集。API Key 仅存本地。代码完全开源可审计。
         </div>
       </div>
     </div>
@@ -407,15 +290,15 @@
   </div><!-- /container -->
 
   <div class="save-bar">
-    <div class="container" style="display:flex;align-items:center;gap:12px;padding:0 20px">
+    <div class="container">
       <button class="btn-save" id="btnSave">保存设置</button>
-      <span class="save-msg" id="saveMsg">✅ 保存成功！</span>
+      <span class="save-msg" id="saveMsg">✅ 已保存</span>
     </div>
   </div>
 
   <div class="page-footer">
     OpenImmersive Translator · AGPL-3.0 开源协议 ·
-    <a href="https://github.com/OpenImmersive/Open-Immersive-Translator" target="_blank">GitHub</a>
+    <a href="https://github.com/OpenImmersive/Open-Immersive-Translator" target="_blank" rel="noopener">GitHub</a>
     · 无数据收集，无遥测
   </div>
 

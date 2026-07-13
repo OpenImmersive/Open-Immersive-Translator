@@ -28,11 +28,32 @@ api.commands.onCommand.addListener(async (command) => {
   }
 });
 
-// 首次安装 → 打开新手引导页
+// 首次安装 → 打开新手引导页；安装/更新时建右键菜单
 if (api.runtime.onInstalled) {
   api.runtime.onInstalled.addListener((details) => {
     if (details.reason === 'install') {
       api.tabs.create({ url: api.runtime.getURL('welcome.html') }).catch(() => {});
+    }
+    createContextMenus();
+  });
+}
+
+// 右键菜单：翻译选中文字 / 翻译此页
+function createContextMenus() {
+  if (!api.contextMenus) return;
+  api.contextMenus.removeAll(() => {
+    api.contextMenus.create({ id: 'yll-translate-selection', title: '翻译选中文字', contexts: ['selection'] });
+    api.contextMenus.create({ id: 'yll-translate-page', title: '翻译此页', contexts: ['page'] });
+  });
+}
+
+if (api.contextMenus) {
+  api.contextMenus.onClicked.addListener((info, tab) => {
+    if (!tab || tab.id == null) return;
+    if (info.menuItemId === 'yll-translate-selection') {
+      api.tabs.sendMessage(tab.id, { type: 'translateSelection' }).catch(() => {});
+    } else if (info.menuItemId === 'yll-translate-page') {
+      api.tabs.sendMessage(tab.id, { type: 'toggleTranslation' }).catch(() => {});
     }
   });
 }

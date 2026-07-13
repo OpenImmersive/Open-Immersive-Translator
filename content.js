@@ -174,7 +174,7 @@
       });
       const footer = document.createElement('div');
       footer.className = 'yll-popup-footer';
-      footer.append('语灵灵 · ', copy);
+      footer.append('OpenImmersive · ', copy);
       selPopup.append(textDiv, footer);
       selPopup.className = 'yll-popup-done';
     }

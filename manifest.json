@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "语灵灵 - 隐私优先双语翻译",
+  "name": "OpenImmersive Translator",
   "version": "1.4.0",
   "description": "开源、隐私优先的双语网页翻译插件。预集成免费引擎，支持 BYOK（自带 API Key），所有翻译请求直接从浏览器发往所选引擎，无中间服务器，零数据收集。可选敏感信息脱敏：邮箱/电话/卡号/API Key 在本地打码后才发出，翻译后自动还原。",
-  "author": "YuLingLing Open Source",
+  "author": "OpenImmersive",
   "homepage_url": "https://github.com/OpenImmersive/Open-Immersive-Translate",
   "icons": {
     "16": "icons/icon-16.png",
@@ -19,7 +19,7 @@
       "128": "icons/icon-128.png"
     },
     "default_popup": "popup.html",
-    "default_title": "语灵灵 - 双语翻译"
+    "default_title": "OpenImmersive Translator"
   },
   "background": {
     "service_worker": "background.js"

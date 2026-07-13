@@ -8,219 +8,122 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      width: 280px;
+      width: 300px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, '微软雅黑', sans-serif;
       font-size: 13px;
-      color: #1f2d3d;
+      color: #1c1917;
       background: #fff;
     }
 
-    /* 头部 */
     .header {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 12px 14px 10px;
-      background: linear-gradient(135deg, #1a5276, #2980b9);
+      gap: 10px;
+      padding: 14px 16px;
+      background: linear-gradient(135deg, #0f766e, #0d9488);
       color: #fff;
     }
+    .header img { width: 24px; height: 24px; border-radius: 5px; }
+    .header-title { font-size: 15px; font-weight: 700; }
 
-    .header-icon {
-      font-size: 20px;
-      line-height: 1;
-    }
-
-    .header-title {
-      font-size: 15px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-    }
-
-    .header-sub {
-      font-size: 10px;
-      opacity: 0.8;
-      margin-left: auto;
-    }
-
-    /* 主按钮 */
     .main-btn {
       display: block;
-      width: calc(100% - 28px);
-      margin: 14px auto 0;
-      padding: 10px;
-      background: #2980b9;
+      width: calc(100% - 32px);
+      margin: 16px auto 0;
+      padding: 12px;
+      background: #0d9488;
       color: #fff;
       border: none;
-      border-radius: 6px;
-      font-size: 14px;
+      border-radius: 8px;
+      font-size: 15px;
       font-weight: 600;
       cursor: pointer;
       transition: background 0.15s;
       text-align: center;
     }
+    .main-btn:hover { background: #0f766e; }
+    .main-btn.active { background: #e11d48; }
+    .main-btn.active:hover { background: #be123c; }
+    .main-btn:disabled { background: #d6d3d1; cursor: not-allowed; }
 
-    .main-btn:hover { background: #1a5276; }
-    .main-btn:active { background: #154360; }
-
-    .main-btn.active {
-      background: #e74c3c;
-    }
-
-    .main-btn.active:hover {
-      background: #c0392b;
-    }
-
-    .main-btn:disabled {
-      background: #aab7b8;
-      cursor: not-allowed;
-    }
-
-    .pdf-btn {
-      background: #6c3483;
-      margin-top: 6px;
-      font-size: 13px;
-    }
-
-    .pdf-btn:hover { background: #512e5f; }
-
-    /* 状态栏 */
     .status {
-      margin: 8px 14px 0;
-      padding: 6px 10px;
-      background: #f0f4f8;
-      border-radius: 5px;
+      margin: 10px 16px 0;
       font-size: 11px;
-      color: #5d6d7e;
-      min-height: 28px;
+      color: #78716c;
       display: flex;
       align-items: center;
       gap: 6px;
+      min-height: 16px;
     }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #d6d3d1; flex-shrink: 0; }
+    .status-dot.on { background: #16a34a; }
+    .status-dot.loading { background: #f59e0b; animation: pulse 0.8s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.3;} }
 
-    .status-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: #bdc3c7;
-      flex-shrink: 0;
-    }
-
-    .status-dot.on { background: #27ae60; }
-    .status-dot.loading {
-      background: #f39c12;
-      animation: pulse 0.8s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
-    }
-
-    /* 选项区 */
-    .options {
-      padding: 12px 14px 0;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .option-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .option-label {
-      font-size: 11px;
-      color: #7f8c8d;
-      width: 50px;
-      flex-shrink: 0;
-    }
+    .rows { padding: 14px 16px 4px; display: flex; flex-direction: column; gap: 12px; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .row-label { font-size: 13px; color: #44403c; }
 
     select {
-      flex: 1;
-      padding: 5px 8px;
-      border: 1px solid #d0d7de;
-      border-radius: 5px;
-      font-size: 12px;
-      color: #1f2d3d;
+      padding: 6px 10px;
+      border: 1px solid #d6d3d1;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #1c1917;
       background: #fff;
       cursor: pointer;
       outline: none;
+      min-width: 130px;
     }
+    select:focus { border-color: #0d9488; }
 
-    select:focus {
-      border-color: #2980b9;
+    /* 开关 */
+    .switch { position: relative; display: inline-block; width: 40px; height: 22px; flex-shrink: 0; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; inset: 0; cursor: pointer;
+      background: #d6d3d1; border-radius: 22px; transition: .18s;
     }
-
-    /* 分割线 */
-    .divider {
-      margin: 12px 14px 0;
-      border: none;
-      border-top: 1px solid #eaecef;
+    .slider::before {
+      content: ''; position: absolute; height: 16px; width: 16px; left: 3px; top: 3px;
+      background: #fff; border-radius: 50%; transition: .18s;
     }
+    input:checked + .slider { background: #0d9488; }
+    input:checked + .slider::before { transform: translateX(18px); }
 
-    /* 页脚 */
-    .footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 8px 14px 12px;
-      font-size: 11px;
-      color: #8b949e;
-    }
-
-    .footer a {
-      color: #0969da;
-      text-decoration: none;
-      cursor: pointer;
-    }
-
-    .footer a:hover { text-decoration: underline; }
-
-    .privacy-badge {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 10px;
-      color: #27ae60;
-    }
-
-    .privacy-badge::before {
-      content: '🔒';
-      font-size: 10px;
-    }
-
-    /* 快捷键提示 */
+    .hint { padding: 2px 16px 0; font-size: 11px; color: #a8a29e; }
     kbd {
-      display: inline-block;
-      padding: 1px 5px;
-      background: #f6f8fa;
-      border: 1px solid #d0d7de;
-      border-radius: 3px;
-      font-size: 10px;
-      font-family: monospace;
-      color: #444;
+      display: inline-block; padding: 1px 5px; background: #f5f5f4;
+      border: 1px solid #e7e5e4; border-radius: 3px; font-size: 10px;
+      font-family: monospace; color: #57534e;
     }
+
+    hr { margin: 12px 16px 0; border: none; border-top: 1px solid #f0efed; }
+
+    .footer {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 16px 14px; font-size: 12px;
+    }
+    .footer a { color: #0d9488; text-decoration: none; cursor: pointer; }
+    .footer a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
   <div class="header">
-    <span class="header-icon">🌐</span>
+    <img src="icons/icon-48.png" alt="" />
     <span class="header-title">OpenImmersive Translator</span>
-    <span class="header-sub">隐私优先双语翻译</span>
   </div>
 
-  <button class="main-btn" id="btnTranslate">翻译当前页面</button>
+  <button class="main-btn" id="btnTranslate">翻译此页</button>
 
   <div class="status" id="status">
     <span class="status-dot" id="statusDot"></span>
-    <span id="statusText">准备就绪 · <kbd>Alt+T</kbd> 快捷键</span>
+    <span id="statusText"></span>
   </div>
 
-  <div class="options">
-    <div class="option-row">
-      <span class="option-label">目标语言</span>
+  <div class="rows">
+    <div class="row">
+      <span class="row-label">翻译成</span>
       <select id="selLang">
         <option value="zh-CN">简体中文</option>
         <option value="zh-TW">繁体中文</option>
@@ -231,30 +134,22 @@
         <option value="de">Deutsch</option>
         <option value="es">Español</option>
         <option value="ru">Русский</option>
-        <option value="ar">العربية</option>
         <option value="pt">Português</option>
       </select>
     </div>
-    <div class="option-row">
-      <span class="option-label">翻译引擎</span>
-      <select id="selEngine">
-        <optgroup label="免费引擎（无需Key）">
-          <option value="google">Google Translate ⭐</option>
-          <option value="mymemory">MyMemory（备用）</option>
-          <option value="libretranslate">LibreTranslate（开源）</option>
-        </optgroup>
-        <optgroup label="高质量引擎（需配置Key）">
-          <option value="deepl">DeepL（免费5M字/月）</option>
-          <option value="deepseek">DeepSeek（极低成本）</option>
-          <option value="openai">OpenAI GPT</option>
-        </optgroup>
-      </select>
+    <div class="row">
+      <span class="row-label">悬停翻译（按住 Alt 划过段落）</span>
+      <label class="switch"><input type="checkbox" id="swHover" /><span class="slider"></span></label>
     </div>
   </div>
 
+  <div class="hint">快捷键：<kbd>Alt+T</kbd> 整页 · 选中即翻 · 输入框 <kbd>Alt+Enter</kbd> 译成外语</div>
+
+  <hr />
+
   <div class="footer">
-    <a id="btnOptions" href="#">⚙️ 设置 / API Key</a>
-    <span class="privacy-badge">直连翻译，数据不经中间服务器</span>
+    <a id="btnPdf" href="#">翻译 PDF 文件 →</a>
+    <a id="btnOptions" href="#">更多设置</a>
   </div>
 
   <script src="popup.js"></script>

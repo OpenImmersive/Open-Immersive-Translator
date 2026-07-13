@@ -105,6 +105,7 @@
   document.addEventListener('touchend', onMouseUp);
 
   async function onMouseUp(e) {
+    if (!selectionEnabled) return;
     // 点击了自己的popup则忽略
     if (selPopup && selPopup.contains(e.target)) return;
 
@@ -225,12 +226,23 @@
     'BLOCKQUOTE', 'FIGCAPTION', 'DT', 'DD', 'TD', 'TH', 'SUMMARY'
   ]);
 
-  // 状态与设置同步：hover 走 state.engine/targetLang，先从存储初始化，再随改动更新。
-  getSettings().then(s => {
+  // 划词翻译开关（默认开）
+  let selectionEnabled = true;
+  // 输入框翻译（可编辑区按 Alt+Enter 就地译成 inputTargetLang，默认英文）
+  let inputEnabled = true;
+  let inputTargetLang = 'en';
+
+  // 状态与设置同步：hover/输入框走 state.engine/targetLang，先从存储初始化，再随改动更新。
+  // 注意：必须显式列出所有键——getSettings() 只取 targetLang/engine，读不到行为开关。
+  storageGet(['targetLang', 'engine', 'hoverTranslate', 'hoverKey',
+    'selectionTranslate', 'inputTranslate', 'inputTargetLang']).then(s => {
     if (s.engine) state.engine = s.engine;
     if (s.targetLang) state.targetLang = s.targetLang;
     if (s.hoverTranslate === false) hoverEnabled = false;
     if (typeof s.hoverKey === 'string') hoverKey = s.hoverKey;
+    if (s.selectionTranslate === false) selectionEnabled = false;
+    if (s.inputTranslate === false) inputEnabled = false;
+    if (typeof s.inputTargetLang === 'string') inputTargetLang = s.inputTargetLang;
   });
   if (api.storage && api.storage.onChanged) {
     api.storage.onChanged.addListener((changes, area) => {
@@ -239,8 +251,41 @@
       if (changes.targetLang) state.targetLang = changes.targetLang.newValue || state.targetLang;
       if (changes.hoverTranslate) hoverEnabled = changes.hoverTranslate.newValue !== false;
       if (changes.hoverKey) hoverKey = changes.hoverKey.newValue || hoverKey;
+      if (changes.selectionTranslate) selectionEnabled = changes.selectionTranslate.newValue !== false;
+      if (changes.inputTranslate) inputEnabled = changes.inputTranslate.newValue !== false;
+      if (changes.inputTargetLang) inputTargetLang = changes.inputTargetLang.newValue || inputTargetLang;
     });
   }
+
+  // ===== 输入框翻译：在可编辑区按 Alt+Enter → 就地译成 inputTargetLang（写外语场景）=====
+  function editableTarget(el) {
+    if (!el || el.nodeType !== Node.ELEMENT_NODE) return null;
+    if (el.tagName === 'TEXTAREA') return el;
+    if (el.tagName === 'INPUT' && /^(text|search|email|url|)$/i.test(el.getAttribute('type') || '')) return el;
+    if (el.isContentEditable) return el;
+    return null;
+  }
+
+  document.addEventListener('keydown', async (e) => {
+    if (!inputEnabled) return;
+    if (!(e.altKey && e.key === 'Enter')) return;
+    const el = editableTarget(e.target);
+    if (!el) return;
+    const isCE = el.isContentEditable;
+    const text = (isCE ? el.innerText : el.value) || '';
+    if (!text.trim() || text.trim().length > 5000) return;
+    e.preventDefault();
+    try {
+      const resp = await api.runtime.sendMessage({
+        type: 'translate', text: text.trim(),
+        engine: state.engine, targetLang: inputTargetLang, sourceLang: 'auto'
+      });
+      if (resp && resp.success && resp.translation) {
+        if (isCE) { el.innerText = resp.translation; }
+        else { el.value = resp.translation; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      }
+    } catch (err) { /* 静默失败，保留原文 */ }
+  }, true);
 
   function hoverKeyHeld(e) {
     const prop = HOVER_KEY_PROP[hoverKey];

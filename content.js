@@ -212,6 +212,64 @@
     if (selPopup && !selPopup.contains(e.target)) hidePopup();
   });
 
+  // ===== 悬停翻译（按住触发键 + 鼠标扫过段落 → 就地翻译该段）=====
+  // 沉浸式翻译的「第二心智入口」：无需选中，按住 Alt 划过正文即逐段翻译。
+  // 默认开启、默认 Alt；复用页面翻译的 translateBlock/injectTranslation。
+  let hoverEnabled = true;
+  let hoverKey = 'Alt'; // 'Alt' | 'Control' | 'Shift' | 'off'
+  let lastHoverEl = null;
+
+  const HOVER_KEY_PROP = { Alt: 'altKey', Control: 'ctrlKey', Shift: 'shiftKey' };
+  const HOVER_BLOCK_TAGS = new Set([
+    'P', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
+    'BLOCKQUOTE', 'FIGCAPTION', 'DT', 'DD', 'TD', 'TH', 'SUMMARY'
+  ]);
+
+  // 状态与设置同步：hover 走 state.engine/targetLang，先从存储初始化，再随改动更新。
+  getSettings().then(s => {
+    if (s.engine) state.engine = s.engine;
+    if (s.targetLang) state.targetLang = s.targetLang;
+    if (s.hoverTranslate === false) hoverEnabled = false;
+    if (typeof s.hoverKey === 'string') hoverKey = s.hoverKey;
+  });
+  if (api.storage && api.storage.onChanged) {
+    api.storage.onChanged.addListener((changes, area) => {
+      if (area !== 'local') return;
+      if (changes.engine) state.engine = changes.engine.newValue || state.engine;
+      if (changes.targetLang) state.targetLang = changes.targetLang.newValue || state.targetLang;
+      if (changes.hoverTranslate) hoverEnabled = changes.hoverTranslate.newValue !== false;
+      if (changes.hoverKey) hoverKey = changes.hoverKey.newValue || hoverKey;
+    });
+  }
+
+  function hoverKeyHeld(e) {
+    const prop = HOVER_KEY_PROP[hoverKey];
+    return prop ? Boolean(e[prop]) : false;
+  }
+
+  function findHoverBlock(node) {
+    let el = node;
+    while (el && el !== document.body) {
+      if (el.nodeType === Node.ELEMENT_NODE && HOVER_BLOCK_TAGS.has(el.tagName) && shouldTranslate(el)) {
+        const text = extractText(el);
+        if (text && text.trim().length >= 5 && !isAlreadyTargetLang(text, state.targetLang)) return el;
+      }
+      el = el.parentElement;
+    }
+    return null;
+  }
+
+  document.addEventListener('mouseover', (e) => {
+    if (!hoverEnabled || hoverKey === 'off') return;
+    if (!hoverKeyHeld(e)) return;
+    const block = findHoverBlock(e.target);
+    if (!block || block === lastHoverEl || block.dataset.yllDone) return;
+    lastHoverEl = block;
+    translateBlock(block);
+  }, true);
+  // 松开触发键后重置，允许再次划过同一段落触发
+  document.addEventListener('keyup', () => { lastHoverEl = null; });
+
   // ===== 页面翻译主流程 =====
 
   async function translatePage() {
@@ -434,7 +492,10 @@
       escHtml,
       collectBlocks,
       injectTranslation,
-      removeTranslations
+      removeTranslations,
+      findHoverBlock,
+      hoverKeyHeld,
+      setHoverKey: (k) => { hoverKey = k; }
     };
   }
 

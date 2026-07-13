@@ -421,3 +421,38 @@ describe('collectBlocks', () => {
     p.remove();
   });
 });
+
+// ─── 悬停翻译 hover translate ────────────────────────────────────────────────
+
+describe('hover translate', () => {
+  test('hoverKeyHeld 读对应修饰键（默认 Alt）', () => {
+    expect(fns.hoverKeyHeld({ altKey: true })).toBe(true);
+    expect(fns.hoverKeyHeld({ altKey: false })).toBe(false);
+    expect(fns.hoverKeyHeld({ ctrlKey: true })).toBe(false); // 默认键是 Alt
+  });
+
+  test('setHoverKey off 时任何键都不触发', () => {
+    fns.setHoverKey('off');
+    expect(fns.hoverKeyHeld({ altKey: true })).toBe(false);
+    fns.setHoverKey('Alt'); // 复位，避免污染其他用例
+  });
+
+  test('findHoverBlock 从命中的子节点向上找到可翻译段落', () => {
+    document.body.innerHTML = '<article><p id="para">This is a long English paragraph worth translating.<span id="child">inline</span></p></article>';
+    const child = document.getElementById('child');
+    const block = fns.findHoverBlock(child);
+    expect(block).not.toBeNull();
+    expect(block.id).toBe('para');
+  });
+
+  test('findHoverBlock 跳过已是中文的段落', () => {
+    document.body.innerHTML = '<p id="zh">这是一段已经是中文的内容不需要翻译呀呀呀</p>';
+    expect(fns.findHoverBlock(document.getElementById('zh'))).toBeNull();
+  });
+
+  test('findHoverBlock 对非文本块返回 null', () => {
+    document.body.innerHTML = '<div id="wrap"><nav><p>Skip me</p></nav></div>';
+    // nav 内的段落被 shouldTranslate 排除
+    expect(fns.findHoverBlock(document.querySelector('nav p'))).toBeNull();
+  });
+});

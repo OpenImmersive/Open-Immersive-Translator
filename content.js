@@ -89,6 +89,12 @@
       translateCurrentSelection();
       return false;
     }
+
+    // popup 的「总是翻译该语言」开关需要知道当前页是什么语种
+    if (msg.type === 'getPageLang') {
+      sendResponse({ lang: detectPageLang() });
+      return false;
+    }
   });
 
   // ===== 快捷键 Alt+T =====
@@ -266,7 +272,8 @@
   // 状态与设置同步：hover/输入框走 state.engine/targetLang，先从存储初始化，再随改动更新。
   // 注意：必须显式列出所有键——getSettings() 只取 targetLang/engine，读不到行为开关。
   storageGet(['targetLang', 'engine', 'hoverTranslate', 'hoverKey',
-    'selectionTranslate', 'inputTranslate', 'inputTargetLang', 'autoTranslateSites', 'floatBall']).then(s => {
+    'selectionTranslate', 'inputTranslate', 'inputTargetLang', 'autoTranslateSites',
+    'autoTranslateLangs', 'floatBall']).then(s => {
     if (s.engine) state.engine = s.engine;
     if (s.targetLang) state.targetLang = s.targetLang;
     if (s.hoverTranslate === false) hoverEnabled = false;
@@ -281,8 +288,57 @@
       setTimeout(() => {
         if (!state.isTranslated && !state.isTranslating) translatePage();
       }, 800);
+      return;
+    }
+    // 总是翻译该语言：页面语种命中名单就自动整页翻译（与站点名单互补——
+    // 站点名单认域名，语言名单认内容，遇到没见过的外语站也能直接双语）
+    if (Array.isArray(s.autoTranslateLangs) && s.autoTranslateLangs.length) {
+      maybeAutoTranslateByLang(s.autoTranslateLangs);
     }
   });
+
+  // 页面语种判定：`<html lang>` 优先，缺失时按正文字符所属书写系统本地推断。
+  // 刻意不做服务端语种识别——为判个语种就把正文样本发出去，和"无中间服务器、
+  // 零数据收集"冲突；两步都判不出就不自动翻，保守但不泄露。
+  const SCRIPT_RANGES = [
+    [/[一-鿿]/g, 'zh'],
+    [/[぀-ヿ]/g, 'ja'],
+    [/[가-힯]/g, 'ko'],
+    [/[Ѐ-ӿ]/g, 'ru'],
+    [/[؀-ۿ]/g, 'ar'],
+    [/[֐-׿]/g, 'he'],
+    [/[Ͱ-Ͽ]/g, 'el'],
+    [/[฀-๿]/g, 'th'],
+    [/[ऀ-ॿ]/g, 'hi'],
+  ];
+
+  function detectPageLang() {
+    const declared = (document.documentElement.getAttribute('lang') || '').trim().toLowerCase();
+    if (declared) return declared.split('-')[0];
+    const sample = ((document.body && (document.body.innerText || document.body.textContent)) || '')
+      .replace(/\s+/g, ' ').trim().slice(0, 1000);
+    if (sample.length < 50) return '';
+    // 日文常混大量汉字，先看假名再看汉字，避免把日文判成中文。
+    const kana = (sample.match(/[぀-ヿ]/g) || []).length;
+    if (kana / sample.length > 0.05) return 'ja';
+    for (const [re, lang] of SCRIPT_RANGES) {
+      const hits = (sample.match(re) || []).length;
+      if (hits / sample.length > 0.2) return lang;
+    }
+    return '';
+  }
+
+  function maybeAutoTranslateByLang(langs) {
+    const pageLang = detectPageLang();
+    if (!pageLang) return;
+    const wanted = langs.some(l => String(l).toLowerCase().split('-')[0] === pageLang);
+    if (!wanted) return;
+    // 页面本来就是目标语言时不翻（目标中文、页面也中文）
+    if (state.targetLang.toLowerCase().split('-')[0] === pageLang) return;
+    setTimeout(() => {
+      if (!state.isTranslated && !state.isTranslating) translatePage();
+    }, 800);
+  }
   if (api.storage && api.storage.onChanged) {
     api.storage.onChanged.addListener((changes, area) => {
       if (area !== 'local') return;
@@ -682,7 +738,8 @@
       removeTranslations,
       findHoverBlock,
       hoverKeyHeld,
-      setHoverKey: (k) => { hoverKey = k; }
+      setHoverKey: (k) => { hoverKey = k; },
+      detectPageLang
     };
   }
 

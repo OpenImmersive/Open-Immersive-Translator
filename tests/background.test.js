@@ -465,3 +465,43 @@ describe('runtime.onMessage listener', () => {
     expect(typeof response.lang).toBe('string');
   });
 });
+
+// ─── M2: website-backed AI tiers ────────────────────────────────────────────
+
+describe('site AI tiers (oi-standard / oi-premium)', () => {
+  test('posts to the site API with the session cookie and the tier as mode', async () => {
+    let seen = null;
+    const ctx = loadBg({
+      fetchImpl: (url, init) => {
+        seen = { url, init };
+        return Promise.resolve({
+          ok: true, status: 200,
+          json: () => Promise.resolve({ translatedText: '你好', detectedSource: 'English' }),
+        });
+      },
+    });
+    const out = await ctx.translate({ text: 'Hello', engine: 'oi-premium', targetLang: 'zh-CN' });
+    expect(out).toBe('你好');
+    expect(seen.url).toContain('/api/translate');
+    expect(seen.init.credentials).toBe('include');
+    const body = JSON.parse(seen.init.body);
+    expect(body.mode).toBe('premium');
+    expect(body.target).toBe('Simplified Chinese');
+  });
+
+  test('401 from the site becomes a sign-in hint', async () => {
+    const ctx = loadBg({
+      fetchImpl: () => Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({}) }),
+    });
+    await expect(ctx.translate({ text: 'Hi', engine: 'oi-standard', targetLang: 'zh-CN' }))
+      .rejects.toThrow(/登录/);
+  });
+
+  test('402 from the site becomes a top-up hint', async () => {
+    const ctx = loadBg({
+      fetchImpl: () => Promise.resolve({ ok: false, status: 402, json: () => Promise.resolve({}) }),
+    });
+    await expect(ctx.translate({ text: 'Hi', engine: 'oi-standard', targetLang: 'zh-CN' }))
+      .rejects.toThrow(/额度不足/);
+  });
+});

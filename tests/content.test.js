@@ -508,3 +508,58 @@ describe('collectBlocks leaf fallback', () => {
     document.body.innerHTML = '';
   });
 });
+
+// ─── M2: local page-language detection (no network) ─────────────────────────
+
+describe('detectPageLang', () => {
+  afterEach(() => {
+    document.documentElement.removeAttribute('lang');
+    document.body.innerHTML = '';
+  });
+
+  test('trusts the html lang attribute and strips the region', () => {
+    document.documentElement.setAttribute('lang', 'ja-JP');
+    expect(fns.detectPageLang()).toBe('ja');
+  });
+
+  test('falls back to script detection when lang is absent', () => {
+    document.body.innerHTML = '';
+    const p = document.createElement('p');
+    p.textContent = '这是一段足够长的中文正文内容，用来触发本地的书写系统判定逻辑，'
+      + '需要超过五十个字符才会进入检测分支，所以这里再补充一些文字。';
+    document.body.appendChild(p);
+    expect(fns.detectPageLang()).toBe('zh');
+  });
+
+  test('kana wins over han so Japanese is not read as Chinese', () => {
+    document.body.innerHTML = '';
+    const p = document.createElement('p');
+    p.textContent = 'これは日本語の文章です。漢字と仮名が混在していますが、'
+      + '仮名の比率で日本語と判定されるべきです。もう少し文字を足しておきます。';
+    document.body.appendChild(p);
+    expect(fns.detectPageLang()).toBe('ja');
+  });
+
+  test('returns empty for short or Latin-script text rather than guessing', () => {
+    document.body.innerHTML = '';
+    const p = document.createElement('p');
+    p.textContent = 'A perfectly ordinary English paragraph with no lang attribute set on it.';
+    document.body.appendChild(p);
+    expect(fns.detectPageLang()).toBe('');
+  });
+});
+
+// Regression: every behaviour flag must be in the storage key list, or the
+// feature silently never fires (this bit hover/input once, and autoTranslateLangs again).
+describe('storage key list', () => {
+  test('content.js requests all behaviour keys it reads', () => {
+    const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'content.js'), 'utf8');
+    const call = src.match(/storageGet\(\[([\s\S]*?)\]\)/);
+    expect(call).not.toBeNull();
+    const requested = call[1];
+    for (const key of ['targetLang', 'engine', 'hoverTranslate', 'hoverKey', 'selectionTranslate',
+      'inputTranslate', 'inputTargetLang', 'autoTranslateSites', 'autoTranslateLangs', 'floatBall']) {
+      expect(requested).toContain(`'${key}'`);
+    }
+  });
+});

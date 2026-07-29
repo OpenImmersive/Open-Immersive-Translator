@@ -100,7 +100,7 @@ describe('translate + sensitiveMask', () => {
       });
     };
     const ctx = loadBg({ fetchImpl, storageData: { sensitiveMask: true } });
-    const out = await ctx.translate({ text: 'Email ME at Admin@Deciqai.com', engine: 'google', targetLang: 'zh-CN' });
-    expect(out).toContain('Admin@Deciqai.com'); // 原值大小写不受引擎影响
+    const out = await ctx.translate({ text: 'Email ME at Admin@Example-Corp.com', engine: 'google', targetLang: 'zh-CN' });
+    expect(out).toContain('Admin@Example-Corp.com'); // 原值大小写不受引擎影响
   });
 });

@@ -241,11 +241,32 @@
   // 输入框翻译（可编辑区按 Alt+Enter 就地译成 inputTargetLang，默认英文）
   let inputEnabled = true;
   let inputTargetLang = 'en';
+  // 悬浮球（默认开）：点一下整页翻译/还原
+  let floatBallEnabled = true;
+  let floatBall = null;
+
+  function ensureFloatBall() {
+    if (!floatBallEnabled || floatBall || !document.body) return;
+    floatBall = document.createElement('div');
+    floatBall.id = 'yll-float-ball';
+    floatBall.setAttribute('data-yll-ui', 'true');
+    floatBall.textContent = '译';
+    floatBall.title = 'OpenImmersive：翻译此页（Alt+T）';
+    floatBall.addEventListener('click', () => {
+      if (state.isTranslated) removeTranslations();
+      else translatePage();
+    });
+    document.body.appendChild(floatBall);
+  }
+
+  function removeFloatBall() {
+    if (floatBall) { floatBall.remove(); floatBall = null; }
+  }
 
   // 状态与设置同步：hover/输入框走 state.engine/targetLang，先从存储初始化，再随改动更新。
   // 注意：必须显式列出所有键——getSettings() 只取 targetLang/engine，读不到行为开关。
   storageGet(['targetLang', 'engine', 'hoverTranslate', 'hoverKey',
-    'selectionTranslate', 'inputTranslate', 'inputTargetLang', 'autoTranslateSites']).then(s => {
+    'selectionTranslate', 'inputTranslate', 'inputTargetLang', 'autoTranslateSites', 'floatBall']).then(s => {
     if (s.engine) state.engine = s.engine;
     if (s.targetLang) state.targetLang = s.targetLang;
     if (s.hoverTranslate === false) hoverEnabled = false;
@@ -253,6 +274,8 @@
     if (s.selectionTranslate === false) selectionEnabled = false;
     if (s.inputTranslate === false) inputEnabled = false;
     if (typeof s.inputTargetLang === 'string') inputTargetLang = s.inputTargetLang;
+    if (s.floatBall === false) floatBallEnabled = false;
+    ensureFloatBall();
     // 自动翻译此网站：命中名单则整页翻译（等动态内容稍稳后触发）
     if (Array.isArray(s.autoTranslateSites) && s.autoTranslateSites.includes(location.hostname)) {
       setTimeout(() => {
@@ -270,6 +293,10 @@
       if (changes.selectionTranslate) selectionEnabled = changes.selectionTranslate.newValue !== false;
       if (changes.inputTranslate) inputEnabled = changes.inputTranslate.newValue !== false;
       if (changes.inputTargetLang) inputTargetLang = changes.inputTargetLang.newValue || inputTargetLang;
+      if (changes.floatBall) {
+        floatBallEnabled = changes.floatBall.newValue !== false;
+        if (floatBallEnabled) ensureFloatBall(); else removeFloatBall();
+      }
     });
   }
 
@@ -333,6 +360,13 @@
 
   // ===== 页面翻译主流程 =====
 
+  // 视口边界（带余量）内的块优先翻译，感知速度对齐"滚到哪翻到哪"类插件；
+  // 视口外的块仍全部排队后台补全——整页完整性是我们相对的差异点，不牺牲。
+  function inViewport(el, margin = 600) {
+    const r = el.getBoundingClientRect();
+    return r.bottom > -margin && r.top < window.innerHeight + margin;
+  }
+
   async function translatePage() {
     if (state.isTranslating) return;
 
@@ -349,19 +383,47 @@
       updateProgressBar();
 
       if (blocks.length === 0) {
-        state.isTranslating = false;
-        hideProgressBar();
         return;
       }
 
-      // 并发翻译，限制3个并发
-      const CONCURRENCY = 3;
-      for (let i = 0; i < blocks.length; i += CONCURRENCY) {
-        await Promise.allSettled(
-          blocks.slice(i, i + CONCURRENCY).map(el => translateBlock(el))
-        );
-        updateProgressBar();
+      // 两级队列：prioritized=视口内（先翻），rest=其余（按文档序垫底）；
+      // IntersectionObserver 把滚动临近的块从 rest 提升进 prioritized。
+      const prioritized = [];
+      const rest = [];
+      const waiting = new Set();
+      for (const b of blocks) {
+        if (inViewport(b)) prioritized.push(b);
+        else { rest.push(b); waiting.add(b); }
       }
+      let observer = null;
+      if (typeof IntersectionObserver === 'function' && waiting.size) {
+        observer = new IntersectionObserver((entries) => {
+          for (const en of entries) {
+            if (en.isIntersecting && waiting.has(en.target)) {
+              waiting.delete(en.target);
+              prioritized.push(en.target);
+              observer.unobserve(en.target);
+            }
+          }
+        }, { rootMargin: '600px' });
+        for (const b of rest) observer.observe(b);
+      }
+
+      const CONCURRENCY = 4;
+      const workers = Array.from({ length: CONCURRENCY }, async () => {
+        for (;;) {
+          let el = prioritized.shift();
+          if (!el) {
+            do { el = rest.shift(); } while (el && !waiting.has(el));
+            if (!el) { if (prioritized.length) continue; break; }
+            waiting.delete(el);
+          }
+          await translateBlock(el);
+          updateProgressBar();
+        }
+      });
+      await Promise.allSettled(workers);
+      if (observer) observer.disconnect();
 
       state.isTranslated = true;
     } finally {
@@ -414,10 +476,30 @@
       if (!shouldTranslate(el)) continue;
 
       const text = extractText(el);
-      if (!text || text.trim().length < 15) continue;
+      if (!text || text.trim().length < 12) continue;
 
       seen.add(el);
       results.push(el);
+    }
+
+    // 兜底：语义选择器几乎没命中时（极简/非语义化页面，如纯 div 文案的站点），
+    // 补捞"叶子块"——不含其它块级候选后代、但直接文本足够长的容器。
+    let coveredLen = 0;
+    for (const el of results) coveredLen += extractText(el).trim().length;
+    const bodyLen = ((document.body && (document.body.innerText || document.body.textContent)) || '').replace(/\s+/g, ' ').trim().length;
+    if (bodyLen >= 40 && coveredLen / bodyLen < 0.5) {
+      for (const el of document.querySelectorAll('div, section, article, span')) {
+        if (seen.has(el)) continue;
+        if (!shouldTranslate(el)) continue;
+        if (el.querySelector('p,div,section,article,ul,ol,table,h1,h2,h3,h4,h5,h6,li,blockquote,td')) continue;
+        const text = extractText(el);
+        if (!text || text.trim().length < 12) continue;
+        let anc = el.parentElement, nested = false;
+        while (anc) { if (seen.has(anc)) { nested = true; break; } anc = anc.parentElement; }
+        if (nested) continue;
+        seen.add(el);
+        results.push(el);
+      }
     }
 
     return results;
@@ -479,8 +561,22 @@
 
   // ===== 注入翻译 =====
 
+  // 标题走行内接排（"Machine translation 机器翻译"式），正文块另起一行；
+  // 两者都直接继承原文的计算样式——译文和原文看起来是同一篇文档。
+  const INLINE_APPEND_TAGS = new Set(['H1', 'H2', 'H3', 'H4', 'H5', 'H6']);
+
   function injectTranslation(el, translation) {
     el.dataset.yllDone = '1';
+
+    if (INLINE_APPEND_TAGS.has(el.tagName)) {
+      const span = document.createElement('span');
+      span.className = 'yll-tr yll-tr-inline';
+      span.setAttribute('data-yll-inject', '1');
+      span.setAttribute('data-yll-ui', 'true');
+      span.textContent = ' ' + translation;
+      el.appendChild(span);
+      return;
+    }
 
     const div = document.createElement('div');
     div.className = 'yll-tr';
@@ -488,6 +584,17 @@
     if (isDarkBg(el)) div.classList.add('yll-tr-dark');
     div.setAttribute('data-yll-inject', '1');
     div.setAttribute('data-yll-ui', 'true');
+    // 样式贴原文：字体/字号/行高/颜色/对齐全部取自原块的计算样式
+    try {
+      const cs = getComputedStyle(el);
+      div.style.fontSize = cs.fontSize;
+      div.style.fontFamily = cs.fontFamily;
+      div.style.fontWeight = cs.fontWeight;
+      div.style.fontStyle = cs.fontStyle;
+      div.style.lineHeight = cs.lineHeight;
+      div.style.color = cs.color;
+      div.style.textAlign = cs.textAlign;
+    } catch (_) { /* jsdom 等环境下取不到就走 CSS 默认 */ }
     div.textContent = translation;
 
     el.insertAdjacentElement('afterend', div);

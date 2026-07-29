@@ -456,3 +456,55 @@ describe('hover translate', () => {
     expect(fns.findHoverBlock(document.querySelector('nav p'))).toBeNull();
   });
 });
+
+// ─── M1: style-matched injection + leaf-block fallback ───────────────────────
+
+describe('injectTranslation M1 behaviors', () => {
+  test('headings get an inline appended span, not a sibling block', () => {
+    const h = document.createElement('h2');
+    h.textContent = 'Machine translation systems overview';
+    document.body.appendChild(h);
+    fns.injectTranslation(h, '机器翻译系统概览');
+    const span = h.querySelector('span.yll-tr.yll-tr-inline');
+    expect(span).not.toBeNull();
+    expect(span.textContent).toBe(' 机器翻译系统概览');
+    expect(h.nextElementSibling).toBeNull();
+    h.remove();
+  });
+
+  test('paragraph translation still lands as a following block', () => {
+    const p = document.createElement('p');
+    p.textContent = 'A paragraph that is long enough to translate.';
+    document.body.appendChild(p);
+    fns.injectTranslation(p, '一个足够长的段落。');
+    const next = p.nextElementSibling;
+    expect(next.classList.contains('yll-tr')).toBe(true);
+    expect(next.classList.contains('yll-tr-inline')).toBe(false);
+    p.remove();
+  });
+});
+
+describe('collectBlocks leaf fallback', () => {
+  test('picks up bare-div copy on non-semantic pages', () => {
+    document.body.innerHTML = '';
+    const d = document.createElement('div');
+    d.textContent = 'This page keeps its copy in plain divs with no semantic tags at all.';
+    document.body.appendChild(d);
+    const blocks = fns.collectBlocks();
+    expect(blocks).toContain(d);
+    document.body.innerHTML = '';
+  });
+
+  test('fallback skips containers that hold block-level children', () => {
+    document.body.innerHTML = '';
+    const wrap = document.createElement('div');
+    const inner = document.createElement('p');
+    inner.textContent = 'Inner paragraph text that is comfortably long enough.';
+    wrap.appendChild(inner);
+    document.body.appendChild(wrap);
+    const blocks = fns.collectBlocks();
+    expect(blocks).toContain(inner);
+    expect(blocks).not.toContain(wrap);
+    document.body.innerHTML = '';
+  });
+});

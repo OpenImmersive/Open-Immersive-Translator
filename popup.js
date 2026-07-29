@@ -6,6 +6,7 @@ const btnTranslate = document.getElementById('btnTranslate');
 const selLang = document.getElementById('selLang');
 const swHover = document.getElementById('swHover');
 const swAutoSite = document.getElementById('swAutoSite');
+const swFloatBall = document.getElementById('swFloatBall');
 const statusDot = document.getElementById('statusDot');
 const statusText = document.getElementById('statusText');
 
@@ -16,10 +17,11 @@ let engine = 'google'; // 引擎收进「更多设置」，popup 只读取、不
 // ===== 初始化 =====
 
 async function init() {
-  const data = await getStorage(['targetLang', 'engine', 'hoverTranslate', 'autoTranslateSites']);
+  const data = await getStorage(['targetLang', 'engine', 'hoverTranslate', 'autoTranslateSites', 'floatBall']);
   selLang.value = data.targetLang || 'zh-CN';
   engine = data.engine || 'google';
   swHover.checked = data.hoverTranslate !== false; // 默认开
+  swFloatBall.checked = data.floatBall !== false; // 默认开
 
   const [tab] = await api.tabs.query({ active: true, currentWindow: true });
   currentTab = tab;
@@ -60,6 +62,7 @@ btnTranslate.addEventListener('click', async () => {
 
 selLang.addEventListener('change', () => setStorage({ targetLang: selLang.value }));
 swHover.addEventListener('change', () => setStorage({ hoverTranslate: swHover.checked }));
+swFloatBall.addEventListener('change', () => setStorage({ floatBall: swFloatBall.checked }));
 
 // 总是翻译此网站：增删当前 host；勾选后立即翻译当前页
 swAutoSite.addEventListener('change', async () => {

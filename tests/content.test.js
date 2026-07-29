@@ -563,3 +563,79 @@ describe('storage key list', () => {
     }
   });
 });
+
+// Grid/flex parents treat a sibling as a new cell, which pushes the translation
+// away from its source text — keep it inside the element in that case.
+describe('injectTranslation in grid/flex layouts', () => {
+  afterEach(() => { document.body.innerHTML = ''; });
+
+  test('goes inside the element when the parent is a grid', () => {
+    const wrap = document.createElement('div');
+    wrap.style.display = 'grid';
+    const p = document.createElement('p');
+    p.textContent = 'A row of a two-column grid layout.';
+    wrap.appendChild(p);
+    document.body.appendChild(wrap);
+    fns.injectTranslation(p, '两列网格布局中的一行。');
+    expect(p.querySelector('.yll-tr')).not.toBeNull();
+    expect(p.nextElementSibling).toBeNull();
+  });
+
+  test('goes inside a table cell rather than becoming a stray column', () => {
+    const table = document.createElement('table');
+    const row = document.createElement('tr');
+    const cell = document.createElement('td');
+    cell.textContent = 'A post title living in a table cell.';
+    row.appendChild(cell);
+    table.appendChild(row);
+    document.body.appendChild(table);
+    fns.injectTranslation(cell, '表格单元格里的文章标题。');
+    expect(cell.querySelector('.yll-tr')).not.toBeNull();
+    expect(row.querySelectorAll(':scope > .yll-tr')).toHaveLength(0);
+  });
+
+  test('stays a sibling in ordinary block flow', () => {
+    const wrap = document.createElement('div');
+    const p = document.createElement('p');
+    p.textContent = 'An ordinary paragraph in normal block flow.';
+    wrap.appendChild(p);
+    document.body.appendChild(wrap);
+    fns.injectTranslation(p, '普通文档流中的段落。');
+    expect(p.querySelector('.yll-tr')).toBeNull();
+    expect(p.nextElementSibling.classList.contains('yll-tr')).toBe(true);
+  });
+});
+
+// A container and a block inside it both match the semantic selector, which
+// would translate the same sentence twice — only the innermost should survive.
+describe('collectBlocks overlap dedup', () => {
+  afterEach(() => { document.body.innerHTML = ''; });
+
+  test('drops the table cell when it only wraps a heading', () => {
+    document.body.innerHTML = '';
+    const table = document.createElement('table');
+    const row = document.createElement('tr');
+    const cell = document.createElement('td');
+    const h = document.createElement('h1');
+    h.textContent = 'Posts in 2026 and other announcements';
+    cell.appendChild(h);
+    row.appendChild(cell);
+    table.appendChild(row);
+    document.body.appendChild(table);
+    const blocks = fns.collectBlocks();
+    expect(blocks).toContain(h);
+    expect(blocks).not.toContain(cell);
+  });
+
+  test('keeps independent siblings', () => {
+    document.body.innerHTML = '';
+    const a = document.createElement('p');
+    a.textContent = 'The first standalone paragraph of the page.';
+    const b = document.createElement('p');
+    b.textContent = 'The second standalone paragraph of the page.';
+    document.body.append(a, b);
+    const blocks = fns.collectBlocks();
+    expect(blocks).toContain(a);
+    expect(blocks).toContain(b);
+  });
+});

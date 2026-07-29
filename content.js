@@ -515,6 +515,12 @@
 
   // ===== DOM 遍历：找到可翻译块 =====
 
+  // 语义选择器会同时命中外层容器和它里面的块（表格单元格里放标题就是典型），
+  // 两者都翻会让同一句话出现两遍。只留最内层的那个。
+  function dropOuterOverlaps(blocks) {
+    return blocks.filter(el => !blocks.some(other => other !== el && el.contains(other)));
+  }
+
   function collectBlocks() {
     const results = [];
     const seen = new WeakSet();
@@ -558,7 +564,7 @@
       }
     }
 
-    return results;
+    return dropOuterOverlaps(results);
   }
 
   function shouldTranslate(el) {
@@ -653,7 +659,14 @@
     } catch (_) { /* jsdom 等环境下取不到就走 CSS 默认 */ }
     div.textContent = translation;
 
-    el.insertAdjacentElement('afterend', div);
+    // 父容器只接受特定子元素时（表格行、grid、flex），兄弟节点会被当成新的
+    // 单元格/网格项，译文就飘到隔壁列去了（Rust blog 的文章列表就是 table）。
+    // 这类容器改成插进原元素内部，译文才留在原格里紧跟原文。
+    const parent = el.parentElement;
+    let display = '';
+    try { display = parent ? getComputedStyle(parent).display : ''; } catch (_) { /* jsdom 无布局 */ }
+    if (/grid|flex|table/.test(display)) el.appendChild(div);
+    else el.insertAdjacentElement('afterend', div);
   }
 
   // 向上找到第一个不透明背景，判断其明度是否偏暗（用于译文配色自适应）

@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const SRC = fs.readFileSync(path.join(__dirname, '..', 'background.js'), 'utf8');
+const LANGS_SRC = fs.readFileSync(path.join(__dirname, '..', 'languages.js'), 'utf8');
 
 /**
  * Load background.js into an isolated vm context with a mocked browser API.
@@ -42,6 +43,10 @@ function loadBg({ fetchImpl, storageData = {} } = {}) {
     clearTimeout: global.clearTimeout
   });
 
+  // Production loads the shared language table into the background context
+  // (importScripts on Chrome, background.scripts on Firefox) — mirror that here
+  // so prompts see real language names instead of bare codes.
+  vm.runInContext(LANGS_SRC, ctx);
   vm.runInContext(SRC, ctx);
   ctx.__listeners = listeners;
   return ctx;

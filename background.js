@@ -12,6 +12,11 @@ if (typeof YLSensitive === 'undefined' && typeof importScripts === 'function') {
   try { importScripts('sensitive-mask.js'); } catch (e) { console.warn('sensitive-mask.js 加载失败', e); }
 }
 
+// 共享语言表（LLM 引擎 prompt 里要写目标语言全名）。同样是加载失败只降级不致命。
+if (typeof YLLangs === 'undefined' && typeof importScripts === 'function') {
+  try { importScripts('languages.js'); } catch (e) { console.warn('languages.js 加载失败', e); }
+}
+
 // Storage 兼容层（Firefox用Promise，Chrome用callback包装）
 function storageGet(keys) {
   if (typeof browser !== 'undefined') return browser.storage.local.get(keys);
@@ -336,19 +341,6 @@ async function detectLanguage(text) {
 
 // ===== 常量 =====
 
-const LANG_NAMES = {
-  'zh-CN': 'Simplified Chinese（简体中文）',
-  'zh-TW': 'Traditional Chinese（繁体中文）',
-  'en': 'English',
-  'ja': 'Japanese（日本語）',
-  'ko': 'Korean（한국어）',
-  'fr': 'French（Français）',
-  'de': 'German（Deutsch）',
-  'es': 'Spanish（Español）',
-  'ru': 'Russian（Русский）',
-  'ar': 'Arabic（العربية）',
-  'pt': 'Portuguese（Português）',
-  'it': 'Italian（Italiano）',
-  'nl': 'Dutch（Nederlands）',
-  'pl': 'Polish（Polski）'
-};
+// 语言名给 LLM 引擎的 prompt 用。以共享语言表为准（199 种），
+// 表里没有的码直接透传，避免新增语言时这里成为静默的瓶颈。
+const LANG_NAMES = (typeof YLLangs !== 'undefined' && YLLangs.NAME) ? YLLangs.NAME : {};

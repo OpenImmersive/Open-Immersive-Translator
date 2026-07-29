@@ -7,17 +7,21 @@ const selLang = document.getElementById('selLang');
 const swHover = document.getElementById('swHover');
 const swAutoSite = document.getElementById('swAutoSite');
 const swFloatBall = document.getElementById('swFloatBall');
+const swAutoLang = document.getElementById('swAutoLang');
+const autoLangName = document.getElementById('autoLangName');
 const statusDot = document.getElementById('statusDot');
 const statusText = document.getElementById('statusText');
 
 let currentTab = null;
 let currentHost = '';
+let currentPageLang = '';
+const LANG_LABELS = { zh: '中文', ja: '日语', ko: '韩语', en: '英语', ru: '俄语', ar: '阿拉伯语', he: '希伯来语', el: '希腊语', th: '泰语', hi: '印地语', fr: '法语', de: '德语', es: '西班牙语', pt: '葡萄牙语', it: '意大利语' };
 let engine = 'google'; // 引擎收进「更多设置」，popup 只读取、不展示
 
 // ===== 初始化 =====
 
 async function init() {
-  const data = await getStorage(['targetLang', 'engine', 'hoverTranslate', 'autoTranslateSites', 'floatBall']);
+  const data = await getStorage(['targetLang', 'engine', 'hoverTranslate', 'autoTranslateSites', 'floatBall', 'autoTranslateLangs']);
   selLang.value = data.targetLang || 'zh-CN';
   engine = data.engine || 'google';
   swHover.checked = data.hoverTranslate !== false; // 默认开
@@ -29,6 +33,16 @@ async function init() {
   const sites = Array.isArray(data.autoTranslateSites) ? data.autoTranslateSites : [];
   swAutoSite.checked = !!currentHost && sites.includes(currentHost);
   swAutoSite.disabled = !currentHost;
+
+  // 「总是翻译该语言」认的是当前页的语种，先问 content script 拿判定结果
+  const langs = Array.isArray(data.autoTranslateLangs) ? data.autoTranslateLangs : [];
+  try {
+    const r = await api.tabs.sendMessage(tab.id, { type: 'getPageLang' });
+    currentPageLang = (r && r.lang) || '';
+  } catch { currentPageLang = ''; }
+  autoLangName.textContent = currentPageLang ? (LANG_LABELS[currentPageLang] || currentPageLang) : '该语言';
+  swAutoLang.checked = !!currentPageLang && langs.includes(currentPageLang);
+  swAutoLang.disabled = !currentPageLang;
 
   try {
     const resp = await api.tabs.sendMessage(tab.id, { type: 'getStatus' });
@@ -76,6 +90,20 @@ swAutoSite.addEventListener('change', async () => {
     sites.delete(currentHost);
   }
   await setStorage({ autoTranslateSites: [...sites] });
+});
+
+// 总是翻译该语言：按当前页语种增删名单；勾选后立即翻译当前页
+swAutoLang.addEventListener('change', async () => {
+  if (!currentPageLang) return;
+  const { autoTranslateLangs } = await getStorage(['autoTranslateLangs']);
+  const langs = new Set(Array.isArray(autoTranslateLangs) ? autoTranslateLangs : []);
+  if (swAutoLang.checked) {
+    langs.add(currentPageLang);
+    if (currentTab) api.tabs.sendMessage(currentTab.id, { type: 'translatePage', targetLang: selLang.value, engine }).catch(() => {});
+  } else {
+    langs.delete(currentPageLang);
+  }
+  await setStorage({ autoTranslateLangs: [...langs] });
 });
 
 // ===== 更多设置 =====

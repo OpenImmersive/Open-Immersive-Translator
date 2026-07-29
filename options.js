@@ -84,3 +84,53 @@ function setStorage(items) {
 
 // ===== 启动 =====
 loadSettings().catch(console.error);
+
+// ===== 文件翻译：本地解析简单文本格式，逐段送翻译，原格式下载 =====
+// 文件内容不上传到任何我们的服务器——只有拆出来的文字片段走用户选定的引擎，
+// 和网页翻译同一条链路。
+
+const fileInput = document.getElementById('fileInput');
+const fileStatus = document.getElementById('fileStatus');
+const fileDownload = document.getElementById('fileDownload');
+
+if (fileInput) {
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files && fileInput.files[0];
+    if (!file) return;
+
+    const format = YLFile.extOf(file.name);
+    if (!YLFile.FORMATS.includes(format)) {
+      fileStatus.textContent = `不支持 .${format}；可用格式：${YLFile.FORMATS.join(' / ')}`;
+      return;
+    }
+
+    const { targetLang = 'zh-CN', engine = 'google' } = await getStorage(['targetLang', 'engine']);
+    const api = typeof browser !== 'undefined' ? browser : chrome;
+    const text = await file.text();
+
+    fileStatus.textContent = '翻译中…';
+    fileDownload.style.display = 'none';
+
+    const translated = await YLFile.translateFile({
+      format,
+      text,
+      onProgress: (done, total) => { fileStatus.textContent = `翻译中… ${done}/${total}`; },
+      translateFn: async (segment) => {
+        const resp = await api.runtime.sendMessage({
+          type: 'translate', text: segment, engine, targetLang, sourceLang: 'auto',
+        });
+        if (!resp || !resp.success) throw new Error(resp ? resp.error : '通信错误');
+        return resp.translation;
+      },
+    });
+
+    const blob = new Blob([translated], { type: 'text/plain;charset=utf-8' });
+    const base = file.name.replace(/\.[^.]+$/, '');
+    fileDownload.href = URL.createObjectURL(blob);
+    fileDownload.download = `${base}.${targetLang}.${format}`;
+    fileDownload.textContent = `⬇ 下载 ${fileDownload.download}`;
+    fileDownload.style.display = 'inline-block';
+    fileStatus.textContent = '完成';
+    fileInput.value = '';
+  });
+}

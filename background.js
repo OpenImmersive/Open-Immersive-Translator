@@ -92,6 +92,8 @@ async function translate({ text, engine, targetLang, sourceLang = 'auto' }) {
 
   let result;
   switch (engine) {
+    case 'oi-standard': result = await translateViaSite(text, targetLang, sourceLang, 'standard'); break;
+    case 'oi-premium':  result = await translateViaSite(text, targetLang, sourceLang, 'premium'); break;
     case 'google':     result = await translateGoogle(text, targetLang, sourceLang); break;
     case 'mymemory':  result = await translateMyMemory(text, targetLang, sourceLang); break;
     case 'deepl':     result = await translateDeepL(text, targetLang, sourceLang, apiKeys.deepl); break;
@@ -105,6 +107,52 @@ async function translate({ text, engine, targetLang, sourceLang = 'auto' }) {
     result = YLSensitive.restoreSensitive(result, masked.entities);
   }
   return result;
+}
+
+// ===== 官网 AI 档（Standard / Premium，走账号 credits）=====
+// 不在插件里存 token：请求带 credentials:'include'，浏览器自动带上官网的
+// httpOnly 会话 cookie。插件本身拿不到凭据，用户在官网登录/登出即时生效。
+// 未登录 401、额度不足 402 —— 都翻成一句能引导用户去官网的错误。
+
+const OI_SITE = 'https://openimmersive.ai';
+
+async function translateViaSite(text, targetLang, sourceLang, tier) {
+  const resp = await fetch(`${OI_SITE}/api/translate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({
+      text,
+      target: siteLangName(targetLang),
+      source: sourceLang === 'auto' ? 'auto' : siteLangName(sourceLang),
+      mode: tier,
+    }),
+  });
+
+  let data = {};
+  try { data = await resp.json(); } catch (_) { /* 非 JSON 走下面的状态码分支 */ }
+
+  if (resp.status === 401) {
+    throw new Error(`需要登录 ${OI_SITE} 才能使用 AI 翻译档（免费的 Google 档无需登录）`);
+  }
+  if (resp.status === 402) {
+    throw new Error(`额度不足，请到 ${OI_SITE} 充值或订阅`);
+  }
+  if (!resp.ok) {
+    throw new Error((data.error && data.error.message) || `官网接口返回 ${resp.status}`);
+  }
+  return data.translatedText || '';
+}
+
+// 官网 API 收的是语言全名（"Simplified Chinese"），插件内部用的是语言码。
+function siteLangName(code) {
+  const map = {
+    'zh-CN': 'Simplified Chinese', 'zh-TW': 'Traditional Chinese',
+    en: 'English', ja: 'Japanese', ko: 'Korean', fr: 'French', de: 'German',
+    es: 'Spanish', ru: 'Russian', ar: 'Standard Arabic', pt: 'Portuguese',
+    it: 'Italian', nl: 'Dutch', pl: 'Polish',
+  };
+  return map[code] || code;
 }
 
 // ===== Google Translate（非官方免费接口，无需Key）=====

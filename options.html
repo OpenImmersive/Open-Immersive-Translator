@@ -214,13 +214,21 @@
               <option value="mymemory">MyMemory（备用）</option>
               <option value="libretranslate">LibreTranslate（开源，需实例地址）</option>
             </optgroup>
+            <optgroup label="AI 档（用官网账号额度，无需自备 Key）">
+              <option value="oi-standard">Standard — 上下文更自然的 AI 翻译</option>
+              <option value="oi-premium">Premium — 顶级模型，专业场景</option>
+            </optgroup>
             <optgroup label="高质量引擎（自带 API Key）">
               <option value="deepl">DeepL（质量最高，免费 50 万字/月）</option>
               <option value="deepseek">DeepSeek（AI 翻译，成本极低）</option>
               <option value="openai">OpenAI GPT-4o-mini</option>
             </optgroup>
           </select>
-          <p class="hint">默认用免费的 Google，够日常使用。想要更高质量再在下面填对应 Key 并切换引擎。</p>
+          <p class="hint">
+            默认用免费的 Google，够日常使用。<strong>AI 档</strong>用
+            <a href="https://openimmersive.ai" target="_blank" rel="noopener">官网账号</a>的 credits，
+            在浏览器里登录官网即可生效（插件不保存任何登录凭据）；也可以自备 API Key 走下面的引擎。
+          </p>
         </div>
 
         <div class="sub-block">
@@ -277,6 +285,21 @@
       </div>
     </details>
 
+    <!-- 文件翻译（简单文本格式，本地解析，不上传） -->
+    <div class="card">
+      <div class="card-header">翻译文件</div>
+      <div class="card-body">
+        <p class="hint" style="margin-top:0">
+          支持 <strong>.srt .ass .html .txt .md</strong>：在本地解析，只把文字送去翻译，
+          时间轴／标签／代码块原样保留。需要保留排版的 PDF、Word 等复杂文档，
+          请用 <a href="https://pdf.openimmersive.ai" target="_blank" rel="noopener">在线文档翻译</a>。
+        </p>
+        <input type="file" id="fileInput" accept=".srt,.ass,.html,.txt,.md" />
+        <div id="fileStatus" class="hint" style="margin-top:8px"></div>
+        <a id="fileDownload" style="display:none"></a>
+      </div>
+    </div>
+
     <!-- 隐私声明 -->
     <div class="card">
       <div class="card-body">
@@ -302,6 +325,7 @@
     · 无数据收集，无遥测
   </div>
 
+  <script src="file-translate.js"></script>
   <script src="options.js"></script>
 </body>
 </html>

@@ -4,7 +4,24 @@ const api = typeof browser !== 'undefined' ? browser : chrome;
 
 // ===== 加载设置 =====
 
+// 语言下拉全部从共享表生成：设置页给全量 199 种，输入框翻译同样全量
+// （写外语的场景没理由比读外语少选项）。
+function fillLanguageSelects() {
+  for (const sel of [document.getElementById('defLang'), document.getElementById('selInputLang')]) {
+    if (!sel || sel.options.length) continue;
+    const toInput = sel.id === 'selInputLang';
+    for (const [code, en, zh] of YLLangs.ALL) {
+      const o = document.createElement('option');
+      o.value = code;
+      const label = zh === en ? en : `${zh}（${en}）`;
+      o.textContent = toInput ? `译成${zh === en ? en : zh}` : label;
+      sel.appendChild(o);
+    }
+  }
+}
+
 async function loadSettings() {
+  fillLanguageSelects();
   const data = await getStorage([
     'targetLang', 'engine', 'apiKeys', 'sensitiveMask',
     'hoverTranslate', 'hoverKey', 'selectionTranslate',

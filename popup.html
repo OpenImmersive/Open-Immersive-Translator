@@ -124,18 +124,8 @@
   <div class="rows">
     <div class="row">
       <span class="row-label">翻译成</span>
-      <select id="selLang">
-        <option value="zh-CN">简体中文</option>
-        <option value="zh-TW">繁体中文</option>
-        <option value="en">English</option>
-        <option value="ja">日本語</option>
-        <option value="ko">한국어</option>
-        <option value="fr">Français</option>
-        <option value="de">Deutsch</option>
-        <option value="es">Español</option>
-        <option value="ru">Русский</option>
-        <option value="pt">Português</option>
-      </select>
+      <!-- 常用语言在此，全部 199 种在设置页 -->
+      <select id="selLang"></select>
     </div>
     <div class="row">
       <span class="row-label">悬停翻译（按住 Alt 划过段落）</span>
@@ -164,6 +154,7 @@
     <a id="btnOptions" href="#">更多设置</a>
   </div>
 
+  <script src="languages.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

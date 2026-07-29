@@ -15,6 +15,22 @@ const statusText = document.getElementById('statusText');
 let currentTab = null;
 let currentHost = '';
 let currentPageLang = '';
+// popup 只列常用语言；用户在设置页选了冷门语言时把它插进来，否则下拉里看不到自己的选择。
+function fillPopupLanguages(current) {
+  const seen = new Set();
+  const add = (code) => {
+    const row = YLLangs.ALL.find(r => r[0] === code);
+    if (!row || seen.has(code)) return;
+    seen.add(code);
+    const o = document.createElement('option');
+    o.value = code;
+    o.textContent = row[2] === row[1] ? row[1] : `${row[2]}（${row[1]}）`;
+    selLang.appendChild(o);
+  };
+  YLLangs.COMMON.forEach(add);
+  if (current) add(current);
+}
+
 const LANG_LABELS = { zh: '中文', ja: '日语', ko: '韩语', en: '英语', ru: '俄语', ar: '阿拉伯语', he: '希伯来语', el: '希腊语', th: '泰语', hi: '印地语', fr: '法语', de: '德语', es: '西班牙语', pt: '葡萄牙语', it: '意大利语' };
 let engine = 'google'; // 引擎收进「更多设置」，popup 只读取、不展示
 
@@ -22,6 +38,7 @@ let engine = 'google'; // 引擎收进「更多设置」，popup 只读取、不
 
 async function init() {
   const data = await getStorage(['targetLang', 'engine', 'hoverTranslate', 'autoTranslateSites', 'floatBall', 'autoTranslateLangs']);
+  fillPopupLanguages(data.targetLang);
   selLang.value = data.targetLang || 'zh-CN';
   engine = data.engine || 'google';
   swHover.checked = data.hoverTranslate !== false; // 默认开

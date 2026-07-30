@@ -639,3 +639,83 @@ describe('collectBlocks overlap dedup', () => {
     expect(blocks).toContain(b);
   });
 });
+
+// Code comments live in spans INSIDE <pre>; "contains code" misses them, so the
+// guard has to look upward too, or comment translations land inside code blocks.
+describe('code block containment', () => {
+  afterEach(() => { document.body.innerHTML = ''; });
+
+  test('a span inside a pre is never translatable', () => {
+    document.body.innerHTML = '';
+    const pre = document.createElement('pre');
+    const span = document.createElement('span');
+    span.textContent = '# division always returns a float';
+    pre.appendChild(span);
+    document.body.appendChild(pre);
+    expect(fns.shouldTranslate(span)).toBe(false);
+    expect(fns.collectBlocks()).not.toContain(span);
+  });
+
+  test('a span outside code is still translatable', () => {
+    document.body.innerHTML = '';
+    const span = document.createElement('span');
+    span.textContent = 'An ordinary run of prose text in a span element.';
+    document.body.appendChild(span);
+    expect(fns.shouldTranslate(span)).toBe(true);
+  });
+});
+
+// Mixed CN/EN entries slip past the CJK-ratio check and come back unchanged;
+// injecting those just doubles the page.
+describe('sameText', () => {
+  test('treats punctuation and spacing differences as identical', () => {
+    expect(fns.sameText('法律（英语：Legal translation）', '法律 (英语: Legal translation)')).toBe(true);
+    expect(fns.sameText('Hello, world!', 'hello world')).toBe(true);
+  });
+
+  test('still reports genuinely different text as different', () => {
+    expect(fns.sameText('机器翻译', 'Machine translation')).toBe(false);
+  });
+});
+
+// Wikipedia embeds <style> inside table cells; if extractText walks into it the
+// stylesheet gets sent to the translator and comes back as Chinese CSS.
+describe('extractText skips non-content children', () => {
+  afterEach(() => { document.body.innerHTML = ''; });
+
+  test('ignores style and script children', () => {
+    const cell = document.createElement('td');
+    const style = document.createElement('style');
+    style.textContent = '.navbar{display:inline;font-weight:normal}';
+    const script = document.createElement('script');
+    script.textContent = 'var x = 1;';
+    cell.append(style, script, document.createTextNode('查论编'));
+    document.body.appendChild(cell);
+    const text = fns.extractText(cell);
+    expect(text).toContain('查论编');
+    expect(text).not.toContain('display:inline');
+    expect(text).not.toContain('var x');
+  });
+
+  test('skips a style buried deeper than a direct child', () => {
+    const li = document.createElement('li');
+    const wrap = document.createElement('span');
+    const style = document.createElement('style');
+    style.textContent = 'cite.citation{font-style:italic}';
+    wrap.append(style, document.createTextNode('Google Translate Gets an Upgrade'));
+    li.appendChild(wrap);
+    document.body.appendChild(li);
+    const text = fns.extractText(li);
+    expect(text).toContain('Google Translate Gets an Upgrade');
+    expect(text).not.toContain('font-style');
+  });
+
+  test('still reads ordinary inline children', () => {
+    const p = document.createElement('p');
+    const em = document.createElement('em');
+    em.textContent = 'emphasised';
+    p.append(document.createTextNode('An '), em, document.createTextNode(' word.'));
+    document.body.appendChild(p);
+    expect(fns.extractText(p)).toBe('An emphasised word.');
+  });
+});

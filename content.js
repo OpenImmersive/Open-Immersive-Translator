@@ -505,6 +505,10 @@
       });
 
       if (resp && resp.success && resp.translation) {
+        // 译文和原文实质相同就别插：中英混排的条目（"法律（英语：Legal
+        // translation）"）CJK 占比过不了 isAlreadyTargetLang 的阈值，翻回来
+        // 却几乎原样，插进去只是把页面撑成两份。这条与语言无关，通用兜底。
+        if (sameText(resp.translation, text)) return;
         injectTranslation(el, resp.translation);
         state.translatedCount++;
       }
@@ -590,6 +594,10 @@
     // 跳过包含代码的块
     if (el.querySelector('code, pre, .code, .highlight')) return false;
 
+    // 也要跳过位于代码块内部的元素：代码里的注释常被包在 span 里，
+    // 只查「是否包含代码」会漏掉它们，结果把注释译文插进 <pre>。
+    if (el.closest('pre, code, kbd, samp, .highlight')) return false;
+
     // 跳过隐藏元素
     if (el.offsetParent === null && el.tagName !== 'BODY') return false;
 
@@ -603,12 +611,24 @@
         text += node.textContent;
       } else if (node.nodeType === Node.ELEMENT_NODE) {
         // 跳过语灵灵注入的内容
-        if (!node.dataset.yllInject) {
-          text += node.textContent;
-        }
+        if (node.dataset.yllInject) continue;
+        // 也跳过不该当正文的子树：维基条目里 <style> 常嵌在 <span> 之类的
+        // 元素内部，只看直接子元素会漏掉，整段 CSS 就被当文字送去翻译
+        // （译文里出现「显示：内联」）。所以要递归下去逐层排除。
+        if (SKIP_TAGS.has(node.tagName)) continue;
+        text += extractText(node);
       }
     }
     return text;
+  }
+
+  // 忽略空白与标点差异后是否是同一段文字（翻译服务常只改动标点/空格）
+  function sameText(a, b) {
+    const norm = (s) => String(s)
+      .replace(/\s+/g, '')
+      .replace(/[，。！？；：、（）【】《》""'',.!?;:()[\]<>"']/g, '')
+      .toLowerCase();
+    return norm(a) === norm(b);
   }
 
   // 简单判断是否已经是目标语言（避免翻译中文→中文）
@@ -752,7 +772,8 @@
       findHoverBlock,
       hoverKeyHeld,
       setHoverKey: (k) => { hoverKey = k; },
-      detectPageLang
+      detectPageLang,
+      sameText
     };
   }
 

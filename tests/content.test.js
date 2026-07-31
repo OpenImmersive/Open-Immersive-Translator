@@ -719,3 +719,76 @@ describe('extractText skips non-content children', () => {
     expect(fns.extractText(p)).toBe('An emphasised word.');
   });
 });
+
+// ─── page hotkeys (Alt+T / Alt+A / Alt+W) ───────────────────────────────────
+
+describe('pageHotkeyAction', () => {
+  const ev = (props) => Object.assign({ altKey: true, ctrlKey: false, metaKey: false }, props);
+
+  test('Alt+T toggles', () => {
+    expect(fns.pageHotkeyAction(ev({ code: 'KeyT', key: 't' }))).toBe('toggle');
+  });
+
+  test('Alt+A toggles (competitor muscle memory)', () => {
+    expect(fns.pageHotkeyAction(ev({ code: 'KeyA', key: 'a' }))).toBe('toggle');
+  });
+
+  test('Alt+W translates', () => {
+    expect(fns.pageHotkeyAction(ev({ code: 'KeyW', key: 'w' }))).toBe('translate');
+  });
+
+  test('macOS composed keys match via e.code (Alt+A gives key "å")', () => {
+    expect(fns.pageHotkeyAction(ev({ code: 'KeyA', key: 'å' }))).toBe('toggle');
+    expect(fns.pageHotkeyAction(ev({ code: 'KeyT', key: '†' }))).toBe('toggle');
+    expect(fns.pageHotkeyAction(ev({ code: 'KeyW', key: '∑' }))).toBe('translate');
+  });
+
+  test('requires Alt', () => {
+    expect(fns.pageHotkeyAction({ altKey: false, ctrlKey: false, metaKey: false, code: 'KeyA', key: 'a' })).toBe(null);
+  });
+
+  test('ignores Ctrl+Alt combos (AltGr typing on some layouts)', () => {
+    expect(fns.pageHotkeyAction(ev({ ctrlKey: true, code: 'KeyA', key: 'a' }))).toBe(null);
+  });
+
+  test('unrelated keys return null', () => {
+    expect(fns.pageHotkeyAction(ev({ code: 'KeyB', key: 'b' }))).toBe(null);
+  });
+
+  test('falls back to e.key when e.code is absent (synthetic events)', () => {
+    expect(fns.pageHotkeyAction(ev({ key: 'w' }))).toBe('translate');
+  });
+});
+
+// ─── float ball hover menu ──────────────────────────────────────────────────
+
+describe('float ball hover menu', () => {
+  test('wrapper with ball and 3-item menu is injected, marked as UI', () => {
+    fns.removeFloatBall();
+    fns.ensureFloatBall();
+    const wrap = document.getElementById('yll-ball-wrap');
+    expect(wrap).not.toBeNull();
+    expect(wrap.dataset.yllUi).toBe('true');
+    expect(document.getElementById('yll-float-ball')).not.toBeNull();
+    const items = wrap.querySelectorAll('.yll-ball-item');
+    expect(items.length).toBe(3);
+    expect(items[2].textContent).toBe('设置');
+  });
+
+  test('设置 item asks background to open the options page', () => {
+    const sent = [];
+    global.browser.runtime.sendMessage = (m) => { sent.push(m); return Promise.resolve({}); };
+    fns.removeFloatBall();
+    fns.ensureFloatBall();
+    const items = document.querySelectorAll('#yll-ball-wrap .yll-ball-item');
+    items[2].click();
+    expect(sent).toContainEqual({ type: 'openOptions' });
+  });
+
+  test('menu contents are excluded from translation collection', () => {
+    fns.removeFloatBall();
+    fns.ensureFloatBall();
+    const item = document.querySelector('#yll-ball-wrap .yll-ball-item');
+    expect(fns.shouldTranslate(item)).toBe(false);
+  });
+});

@@ -97,15 +97,31 @@
     }
   });
 
-  // ===== 快捷键 Alt+T =====
+  // ===== 快捷键：Alt+T / Alt+A 切换整页翻译，Alt+W 翻译整页 =====
+  // Alt+A / Alt+W 对齐主流翻译插件的肌肉记忆，迁移用户按老习惯就能用。
+  // 用 e.code 匹配字母：macOS 上按住 Alt 时 e.key 是组合字符（Alt+T='†'），
+  // 只看 e.key 在 mac 真机上永远匹配不中。
+  function pageHotkeyAction(e) {
+    if (!e.altKey || e.ctrlKey || e.metaKey) return null;
+    const code = e.code || '';
+    const k = /^Key[TAW]$/.test(code) ? code[3].toLowerCase() : String(e.key || '').toLowerCase();
+    if (k === 't' || k === 'a') return 'toggle';
+    if (k === 'w') return 'translate';
+    return null;
+  }
+
   document.addEventListener('keydown', (e) => {
-    if (e.altKey && (e.key === 't' || e.key === 'T')) {
-      e.preventDefault();
-      if (state.isTranslated) {
-        removeTranslations();
-      } else {
-        translatePage();
-      }
+    const action = pageHotkeyAction(e);
+    if (!action) return;
+    // 可编辑区不抢按键（Alt+字母在部分输入法/编辑器里有含义）
+    if (editableTarget(e.target)) return;
+    e.preventDefault();
+    if (action === 'toggle') {
+      if (state.isTranslated) removeTranslations();
+      else translatePage();
+    } else {
+      // Alt+W：未译则译；已译则再跑一遍补翻动态新增内容（已译块会被跳过）
+      translatePage();
     }
   });
 
@@ -251,22 +267,56 @@
   let floatBallEnabled = true;
   let floatBall = null;
 
+  let ballWrap = null;
+
+  // 悬浮球 + 悬停菜单：点球=翻译/还原（老行为不变），悬停展开动作菜单
+  //（第二入口，对齐同类插件的球菜单/侧边栏，纯页面内实现不加任何新权限）。
   function ensureFloatBall() {
     if (!floatBallEnabled || floatBall || !document.body) return;
+    ballWrap = document.createElement('div');
+    ballWrap.id = 'yll-ball-wrap';
+    ballWrap.setAttribute('data-yll-ui', 'true');
+
+    const menu = document.createElement('div');
+    menu.className = 'yll-ball-menu';
+    const mkItem = (label, onClick) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'yll-ball-item';
+      b.textContent = label;
+      // blur：点击后不让按钮留焦点，否则 :focus-within 会把菜单钉住不收起
+      b.addEventListener('click', (e) => { e.stopPropagation(); b.blur(); onClick(); });
+      menu.appendChild(b);
+      return b;
+    };
+    const toggleItem = mkItem('翻译此页', () => {
+      if (state.isTranslated) removeTranslations();
+      else translatePage();
+    });
+    mkItem('翻译选中文字', () => translateCurrentSelection());
+    mkItem('设置', () => {
+      api.runtime.sendMessage({ type: 'openOptions' }).catch(() => {});
+    });
+    // 展开时按当前状态刷新第一项的文案
+    ballWrap.addEventListener('mouseenter', () => {
+      toggleItem.textContent = state.isTranslated ? '恢复原文' : '翻译此页';
+    });
+
     floatBall = document.createElement('div');
     floatBall.id = 'yll-float-ball';
-    floatBall.setAttribute('data-yll-ui', 'true');
     floatBall.textContent = '译';
-    floatBall.title = 'OpenImmersive：翻译此页（Alt+T）';
+    floatBall.title = 'OpenImmersive：翻译此页（Alt+T / Alt+A）';
     floatBall.addEventListener('click', () => {
       if (state.isTranslated) removeTranslations();
       else translatePage();
     });
-    document.body.appendChild(floatBall);
+
+    ballWrap.append(menu, floatBall);
+    document.body.appendChild(ballWrap);
   }
 
   function removeFloatBall() {
-    if (floatBall) { floatBall.remove(); floatBall = null; }
+    if (ballWrap) { ballWrap.remove(); ballWrap = null; floatBall = null; }
   }
 
   // 状态与设置同步：hover/输入框走 state.engine/targetLang，先从存储初始化，再随改动更新。
@@ -771,6 +821,9 @@
       removeTranslations,
       findHoverBlock,
       hoverKeyHeld,
+      pageHotkeyAction,
+      ensureFloatBall,
+      removeFloatBall,
       setHoverKey: (k) => { hoverKey = k; },
       detectPageLang,
       sameText

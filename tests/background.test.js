@@ -510,3 +510,20 @@ describe('site AI tiers (oi-standard / oi-premium)', () => {
       .rejects.toThrow(/额度不足/);
   });
 });
+
+// ─── openOptions (float ball menu entry) ────────────────────────────────────
+
+describe('openOptions message', () => {
+  test('calls runtime.openOptionsPage when available', () => {
+    const ctx = loadBg();
+    let opened = 0;
+    ctx.browser.runtime.openOptionsPage = () => { opened++; };
+    ctx.__listeners.message({ type: 'openOptions' }, {}, () => {});
+    expect(opened).toBe(1);
+  });
+
+  test('does not throw when openOptionsPage is absent', () => {
+    const ctx = loadBg();
+    expect(() => ctx.__listeners.message({ type: 'openOptions' }, {}, () => {})).not.toThrow();
+  });
+});

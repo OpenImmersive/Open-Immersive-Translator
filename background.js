@@ -79,6 +79,12 @@ api.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .catch(() => sendResponse({ success: true, lang: 'unknown' }));
     return true;
   }
+
+  // 悬浮球菜单的「设置」入口（content script 无法直接开 options 页）
+  if (message.type === 'openOptions') {
+    if (api.runtime.openOptionsPage) api.runtime.openOptionsPage();
+    return false;
+  }
 });
 
 // ===== 翻译入口 =====

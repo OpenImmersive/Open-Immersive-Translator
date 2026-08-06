@@ -21,6 +21,7 @@
     isTranslating: false,
     engine: 'google',
     targetLang: 'zh-CN',
+    displayMode: 'bilingual', // 'bilingual' 双语对照 | 'replace' 仅显示译文
     translatedCount: 0,
     totalCount: 0,
     pageKey: location.href
@@ -321,11 +322,12 @@
 
   // 状态与设置同步：hover/输入框走 state.engine/targetLang，先从存储初始化，再随改动更新。
   // 注意：必须显式列出所有键——getSettings() 只取 targetLang/engine，读不到行为开关。
-  storageGet(['targetLang', 'engine', 'hoverTranslate', 'hoverKey',
+  storageGet(['targetLang', 'engine', 'displayMode', 'hoverTranslate', 'hoverKey',
     'selectionTranslate', 'inputTranslate', 'inputTargetLang', 'autoTranslateSites',
     'autoTranslateLangs', 'floatBall']).then(s => {
     if (s.engine) state.engine = s.engine;
     if (s.targetLang) state.targetLang = s.targetLang;
+    if (s.displayMode) state.displayMode = s.displayMode;
     if (s.hoverTranslate === false) hoverEnabled = false;
     if (typeof s.hoverKey === 'string') hoverKey = s.hoverKey;
     if (s.selectionTranslate === false) selectionEnabled = false;
@@ -394,6 +396,7 @@
       if (area !== 'local') return;
       if (changes.engine) state.engine = changes.engine.newValue || state.engine;
       if (changes.targetLang) state.targetLang = changes.targetLang.newValue || state.targetLang;
+      if (changes.displayMode) state.displayMode = changes.displayMode.newValue || state.displayMode;
       if (changes.hoverTranslate) hoverEnabled = changes.hoverTranslate.newValue !== false;
       if (changes.hoverKey) hoverKey = changes.hoverKey.newValue || hoverKey;
       if (changes.selectionTranslate) selectionEnabled = changes.selectionTranslate.newValue !== false;
@@ -479,6 +482,7 @@
     const settings = await getSettings();
     state.engine = settings.engine || 'google';
     state.targetLang = settings.targetLang || 'zh-CN';
+    state.displayMode = settings.displayMode || 'bilingual';
     state.isTranslating = true;
     showProgressBar();
 
@@ -540,10 +544,15 @@
 
   async function translateBlock(el) {
     const text = extractText(el);
-    if (!text || text.trim().length < 5) return;
+    if (!text || text.trim().length < minTextLen(el, 5)) return;
 
     // 跳过已经是目标语言的内容
     if (isAlreadyTargetLang(text, state.targetLang)) return;
+
+    // 「A • B • C」式专有名词名单（署名墙、合作伙伴列表）：引擎会把一部分
+    // 品牌名意译成怪词（Cognition→认知、Disruptive→颠覆性），剩下的保留，
+    // 观感像随机挑着翻。整段跳过比翻一半更不伤原文。
+    if (looksLikeNameList(text)) return;
 
     try {
       const resp = await api.runtime.sendMessage({
@@ -592,7 +601,8 @@
       if (!shouldTranslate(el)) continue;
 
       const text = extractText(el);
-      if (!text || text.trim().length < 12) continue;
+      if (!text || text.trim().length < minTextLen(el, 12)) continue;
+      if (!/\p{L}/u.test(text)) continue; // 纯数字/符号（表格数值列）没有可翻内容
 
       seen.add(el);
       results.push(el);
@@ -632,11 +642,14 @@
     // 跳过标签
     if (SKIP_TAGS.has(el.tagName)) return false;
 
-    // 跳过导航、页眉、页脚等
+    // 跳过导航、页眉、页脚等。header/footer 只在页面级（不在 article/main 里）
+    // 才算页头页脚——新闻站的头条区常包在文章内的 <header> 里，连坐会把
+    // 正文标题整个漏掉（Reuters 频道页头条就是这样丢的）。
     const container = el.closest('nav, header, footer, aside, [role]');
     if (container) {
       const tag = container.tagName;
-      if (['NAV', 'HEADER', 'FOOTER', 'ASIDE'].includes(tag)) return false;
+      if (['NAV', 'ASIDE'].includes(tag)) return false;
+      if (['HEADER', 'FOOTER'].includes(tag) && !container.closest('article, main')) return false;
       const role = container.getAttribute('role');
       if (role && SKIP_ROLES.has(role)) return false;
     }
@@ -650,8 +663,24 @@
 
     // 跳过隐藏元素
     if (el.offsetParent === null && el.tagName !== 'BODY') return false;
+    if (isVisuallyHidden(el)) return false;
 
     return true;
+  }
+
+  // 视觉上不可见的节点：display/visibility 之外还要认出 sr-only 模式
+  //（absolute + 1px 盒 + clip，无障碍专用文本）。NYT 图集把多张图的说明全
+  // 渲染在 DOM 里只显示一张，不过滤会把隐藏的几条全翻出来叠在图上。
+  function isVisuallyHidden(el) {
+    let cs;
+    try { cs = getComputedStyle(el); } catch (_) { return false; }
+    if (!cs) return false;
+    if (cs.display === 'none' || cs.visibility === 'hidden') return true;
+    if (cs.position === 'absolute' || cs.position === 'fixed') {
+      const r = el.getBoundingClientRect();
+      if (r.width <= 1 && r.height <= 1) return true;
+    }
+    return false;
   }
 
   function extractText(el) {
@@ -666,10 +695,29 @@
         // 元素内部，只看直接子元素会漏掉，整段 CSS 就被当文字送去翻译
         // （译文里出现「显示：内联」）。所以要递归下去逐层排除。
         if (SKIP_TAGS.has(node.tagName)) continue;
+        // 视觉隐藏的子节点（sr-only 辅助文本等）不算正文：新闻卡片里的
+        // 隐藏「category」标签混进标题，译文就成了一句拼接怪话。
+        if (isVisuallyHidden(node)) continue;
         text += extractText(node);
       }
     }
     return text;
+  }
+
+  // 表格单元格里合法的内容天然就短（"Chips"、"Funding"），统一用 12 字符
+  // 门槛会把排行榜的词条列整列漏掉、只剩长词条被翻的"选择性翻译"观感。
+  function minTextLen(el, normal) {
+    return (el.tagName === 'TD' || el.tagName === 'TH') ? 3 : normal;
+  }
+
+  // 「A • B • C」式名单：≥8 段、绝大多数段短且以大写/数字开头
+  function looksLikeNameList(text) {
+    const segs = text.split(/[•·]/).map(s => s.trim()).filter(Boolean);
+    if (segs.length < 8) return false;
+    const nameLike = segs.filter(s =>
+      s.length <= 40 && /^[("'\d]*[A-Z0-9]/.test(s) && s.split(/\s+/).length <= 5
+    );
+    return nameLike.length / segs.length >= 0.8;
   }
 
   // 忽略空白与标点差异后是否是同一段文字（翻译服务常只改动标点/空格）
@@ -699,6 +747,22 @@
 
   function injectTranslation(el, translation) {
     el.dataset.yllDone = '1';
+
+    // 仅显示译文：把原文子节点整体挪进一个隐藏的包裹节点（保留 DOM，可还原），
+    // 译文放回元素内部——继承元素级样式，grid/表格里也不产生新兄弟节点。
+    if (state.displayMode === 'replace') {
+      const orig = document.createElement('span');
+      orig.className = 'yll-orig-hidden';
+      orig.setAttribute('data-yll-orig', '1');
+      while (el.firstChild) orig.appendChild(el.firstChild);
+      const tr = document.createElement('span');
+      tr.className = 'yll-tr-replace';
+      tr.setAttribute('data-yll-inject', '1');
+      tr.setAttribute('data-yll-ui', 'true');
+      tr.textContent = translation;
+      el.append(orig, tr);
+      return;
+    }
 
     if (INLINE_APPEND_TAGS.has(el.tagName)) {
       const span = document.createElement('span');
@@ -758,6 +822,14 @@
 
   function removeTranslations() {
     document.querySelectorAll('[data-yll-inject]').forEach(el => el.remove());
+    // 仅译文模式藏起来的原文：把子节点挪回原位再删掉包裹节点
+    document.querySelectorAll('[data-yll-orig]').forEach(wrap => {
+      const parent = wrap.parentNode;
+      if (parent) {
+        while (wrap.firstChild) parent.insertBefore(wrap.firstChild, wrap);
+      }
+      wrap.remove();
+    });
     document.querySelectorAll('[data-yll-done]').forEach(el => delete el.dataset.yllDone);
     state.isTranslated = false;
     state.translatedCount = 0;
@@ -800,7 +872,7 @@
   // ===== 工具函数 =====
 
   function getSettings() {
-    return storageGet(['targetLang', 'engine']);
+    return storageGet(['targetLang', 'engine', 'displayMode']);
   }
 
   function escHtml(str) {
@@ -826,7 +898,11 @@
       removeFloatBall,
       setHoverKey: (k) => { hoverKey = k; },
       detectPageLang,
-      sameText
+      sameText,
+      isVisuallyHidden,
+      looksLikeNameList,
+      minTextLen,
+      setDisplayMode: (m) => { state.displayMode = m; }
     };
   }
 

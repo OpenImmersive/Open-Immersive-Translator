@@ -24,6 +24,15 @@
   opacity: 0.9;
 }
 
+/* 仅显示译文模式：原文包裹后隐藏，译文完全继承原元素样式 */
+.yll-orig-hidden {
+  display: none !important;
+}
+.yll-tr-replace {
+  font: inherit;
+  color: inherit;
+}
+
 /* 悬浮球：点一下整页翻译/还原 */
 #yll-ball-wrap {
   position: fixed;

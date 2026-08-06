@@ -101,3 +101,43 @@ describe('keepEdgeSpace', () => {
     expect(YLFile.keepEdgeSpace('  hi ', 'salut')).toBe('  salut ');
   });
 });
+
+// ─── 批量请求（v1.12.0）────────────────────────────────────────────────────────
+
+describe('batching', () => {
+  test('many short lines go out in few requests, not one per line', async () => {
+    const lines = Array.from({ length: 100 }, (_, i) => `line number ${i}`);
+    let calls = 0;
+    const counting = async (t) => { calls++; return t.toUpperCase(); };
+    const out = await YLFile.translateFile({ format: 'txt', text: lines.join('\n'), translateFn: counting });
+    expect(out).toContain('LINE NUMBER 0');
+    expect(out).toContain('LINE NUMBER 99');
+    expect(calls).toBeLessThanOrEqual(5); // 100 行 ≤5 个请求（默认 50 行/批）
+  });
+
+  test('falls back to per-line when the engine merges lines', async () => {
+    // 引擎把整批合并成一行（行数对不上）→ 该批落回逐行，结果仍全部译出
+    const merging = async (t) => t.includes('\n') ? 'MERGED INTO ONE' : t.toUpperCase();
+    const out = await YLFile.translateFile({ format: 'txt', text: 'aaa\nbbb\nccc', translateFn: merging });
+    expect(out).toBe('AAA\nBBB\nCCC');
+  });
+
+  test('an empty translated line inside a batch keeps the original text', async () => {
+    const dropSecond = async (t) => {
+      if (!t.includes('\n')) return t.toUpperCase();
+      const ls = t.split('\n');
+      return ls.map((l, i) => (i === 1 ? '' : l.toUpperCase())).join('\n');
+    };
+    const out = await YLFile.translateFile({ format: 'txt', text: 'aaa\nbbb\nccc', translateFn: dropSecond });
+    expect(out).toBe('AAA\nbbb\nCCC');
+  });
+
+  test('progress reports total translatable lines', async () => {
+    const seen = [];
+    await YLFile.translateFile({
+      format: 'txt', text: 'aaa\nbbb\nccc', translateFn: upper,
+      onProgress: (done, total) => seen.push([done, total]),
+    });
+    expect(seen[seen.length - 1]).toEqual([3, 3]);
+  });
+});

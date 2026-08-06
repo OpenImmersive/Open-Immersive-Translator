@@ -125,25 +125,61 @@
     }
   }
 
-  // 逐片段翻译。translateFn(text) -> Promise<string>；失败的片段保留原文，
+  // 批量翻译。translateFn(text) -> Promise<string>；失败的片段保留原文，
   // 让用户至少拿到一个结构完整、部分翻译的文件，而不是整份失败。
-  async function translateFile({ format, text, translateFn, concurrency = 3, onProgress }) {
+  //
+  // 多个片段拼成一个请求（按 \n 对齐拆回）：字幕文件动辄上千行，逐行请求
+  // 一部 90 分钟纪录片要 6 分多钟；50 行一批直接压到半分钟内。引擎返回的
+  // 行数对不上这一批就落回逐行，正确性不赌批量。
+  async function translateFile({ format, text, translateFn, concurrency = 3, onProgress,
+    batchLines = 50, batchChars = 1800 }) {
     const { parts, join } = parse(format, text);
     const out = parts.map(p => p.text);
-    const todo = [];
-    parts.forEach((p, i) => { if (p.translatable) todo.push(i); });
+    const idxs = [];
+    parts.forEach((p, i) => { if (p.translatable) idxs.push(i); });
+
+    // 组批：自带换行的片段会破坏按行对齐，单独成批
+    const batches = [];
+    let cur = [], curLen = 0;
+    const flush = () => { if (cur.length) { batches.push(cur); cur = []; curLen = 0; } };
+    for (const i of idxs) {
+      const t = parts[i].text;
+      if (t.includes('\n')) { flush(); batches.push([i]); continue; }
+      if (cur.length >= batchLines || curLen + t.length > batchChars) flush();
+      cur.push(i); curLen += t.length;
+    }
+    flush();
 
     let done = 0;
-    const workers = Array.from({ length: Math.min(concurrency, todo.length || 1) }, async () => {
+    const total = idxs.length;
+    const queue = batches.slice();
+    const workers = Array.from({ length: Math.min(concurrency, queue.length || 1) }, async () => {
       for (;;) {
-        const i = todo.shift();
-        if (i === undefined) break;
-        try {
-          const t = await translateFn(parts[i].text);
-          if (t) out[i] = keepEdgeSpace(parts[i].text, t);
-        } catch (_) { /* 保留原文 */ }
-        done++;
-        if (onProgress) onProgress(done, done + todo.length);
+        const batch = queue.shift();
+        if (!batch) break;
+        let ok = false;
+        if (batch.length > 1) {
+          try {
+            const joined = batch.map(i => parts[i].text).join('\n');
+            const lines = String((await translateFn(joined)) || '').split('\n');
+            if (lines.length === batch.length) {
+              batch.forEach((i, k) => {
+                if (lines[k] && lines[k].trim()) out[i] = keepEdgeSpace(parts[i].text, lines[k]);
+              });
+              ok = true;
+            }
+          } catch (_) { /* 落回逐行 */ }
+        }
+        if (!ok) {
+          for (const i of batch) {
+            try {
+              const t = await translateFn(parts[i].text);
+              if (t) out[i] = keepEdgeSpace(parts[i].text, t);
+            } catch (_) { /* 保留原文 */ }
+          }
+        }
+        done += batch.length;
+        if (onProgress) onProgress(done, total);
       }
     });
     await Promise.all(workers);

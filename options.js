@@ -23,13 +23,14 @@ function fillLanguageSelects() {
 async function loadSettings() {
   fillLanguageSelects();
   const data = await getStorage([
-    'targetLang', 'engine', 'apiKeys', 'sensitiveMask',
+    'targetLang', 'engine', 'displayMode', 'apiKeys', 'sensitiveMask',
     'hoverTranslate', 'hoverKey', 'selectionTranslate',
     'inputTranslate', 'inputTargetLang'
   ]);
 
   // 常用
   document.getElementById('defLang').value = data.targetLang || 'zh-CN';
+  document.getElementById('selDisplayMode').value = data.displayMode || 'bilingual';
   document.getElementById('swHover').checked = data.hoverTranslate !== false;      // 默认开
   document.getElementById('selHoverKey').value = data.hoverKey || 'Alt';
   document.getElementById('swSelection').checked = data.selectionTranslate !== false; // 默认开
@@ -51,6 +52,7 @@ async function loadSettings() {
 document.getElementById('btnSave').addEventListener('click', async () => {
   const settings = {
     targetLang: document.getElementById('defLang').value,
+    displayMode: document.getElementById('selDisplayMode').value,
     hoverTranslate: document.getElementById('swHover').checked,
     hoverKey: document.getElementById('selHoverKey').value,
     selectionTranslate: document.getElementById('swSelection').checked,

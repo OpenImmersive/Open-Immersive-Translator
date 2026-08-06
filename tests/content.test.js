@@ -792,3 +792,194 @@ describe('float ball hover menu', () => {
     expect(fns.shouldTranslate(item)).toBe(false);
   });
 });
+
+// ─── v1.12.0：header 连坐修正 ────────────────────────────────────────────────
+
+describe('header inside article/main is content, not chrome', () => {
+  test('translates p inside <article><header>', () => {
+    const article = document.createElement('article');
+    const header = document.createElement('header');
+    const p = document.createElement('p');
+    p.textContent = 'Anthropic to build in-house chip design team';
+    header.appendChild(p);
+    article.appendChild(header);
+    document.body.appendChild(article);
+    expect(fns.shouldTranslate(p)).toBe(true);
+    article.remove();
+  });
+
+  test('translates h1 inside <main><header>', () => {
+    const main = document.createElement('main');
+    const header = document.createElement('header');
+    const h1 = document.createElement('h1');
+    h1.textContent = 'Top story headline';
+    header.appendChild(h1);
+    main.appendChild(header);
+    document.body.appendChild(main);
+    expect(fns.shouldTranslate(h1)).toBe(true);
+    main.remove();
+  });
+
+  test('still skips page-level header outside article/main', () => {
+    const header = document.createElement('header');
+    const p = document.createElement('p');
+    p.textContent = 'Site chrome text';
+    header.appendChild(p);
+    document.body.appendChild(header);
+    expect(fns.shouldTranslate(p)).toBe(false);
+    header.remove();
+  });
+});
+
+// ─── v1.12.0：视觉隐藏节点过滤 ───────────────────────────────────────────────
+
+describe('visually hidden nodes', () => {
+  test('extractText excludes display:none children (sr-only labels)', () => {
+    const li = document.createElement('li');
+    const kicker = document.createElement('span');
+    kicker.textContent = 'Business';
+    const hidden = document.createElement('span');
+    hidden.textContent = 'category';
+    hidden.style.display = 'none';
+    const title = document.createElement('span');
+    title.textContent = "Fed's Schmid says finances merit watching";
+    li.append(kicker, hidden, title);
+    document.body.appendChild(li);
+    const text = fns.extractText(li);
+    expect(text).toContain('Business');
+    expect(text).not.toContain('category');
+    expect(text).toContain('Schmid');
+    li.remove();
+  });
+
+  test('extractText excludes visibility:hidden children', () => {
+    const p = document.createElement('p');
+    const vis = document.createElement('span');
+    vis.textContent = 'visible caption';
+    const hid = document.createElement('span');
+    hid.textContent = 'stacked hidden caption';
+    hid.style.visibility = 'hidden';
+    p.append(vis, hid);
+    document.body.appendChild(p);
+    const text = fns.extractText(p);
+    expect(text).toContain('visible caption');
+    expect(text).not.toContain('stacked hidden caption');
+    p.remove();
+  });
+
+  test('shouldTranslate skips a visibility:hidden block', () => {
+    const p = document.createElement('p');
+    p.textContent = 'Sergey Ponomarev for The New York Times';
+    p.style.visibility = 'hidden';
+    document.body.appendChild(p);
+    expect(fns.shouldTranslate(p)).toBe(false);
+    p.remove();
+  });
+});
+
+// ─── v1.12.0：表格短词门槛 ──────────────────────────────────────────────────
+
+describe('short table cells', () => {
+  test('minTextLen lowers the bar for td/th only', () => {
+    const td = document.createElement('td');
+    const th = document.createElement('th');
+    const p = document.createElement('p');
+    expect(fns.minTextLen(td, 12)).toBe(3);
+    expect(fns.minTextLen(th, 12)).toBe(3);
+    expect(fns.minTextLen(p, 12)).toBe(12);
+  });
+
+  test('collectBlocks picks up short entity cells but not number cells', () => {
+    const table = document.createElement('table');
+    const tbody = document.createElement('tbody');
+    for (const [name, val] of [['Chips', '61'], ['Funding', '55'], ['OpenAI', '72']]) {
+      const tr = document.createElement('tr');
+      const td1 = document.createElement('td');
+      td1.textContent = name;
+      const td2 = document.createElement('td');
+      td2.textContent = val;
+      tr.append(td1, td2);
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+    document.body.appendChild(table);
+    const blocks = fns.collectBlocks();
+    const texts = blocks.map(el => fns.extractText(el).trim());
+    expect(texts).toContain('Chips');
+    expect(texts).toContain('Funding');
+    expect(texts).toContain('OpenAI');
+    expect(texts).not.toContain('61'); // 纯数字列不送翻
+    table.remove();
+  });
+});
+
+// ─── v1.12.0：专有名词名单跳过 ──────────────────────────────────────────────
+
+describe('looksLikeNameList', () => {
+  test('detects a bullet-separated signatory wall', () => {
+    const text = '1789 Capital • A.Team • Adam • Adaption • Agentastic • Agno • AI Native Foundation • AI Tinkerers • AI21 • alphaXiv • Amazon • AMD';
+    expect(fns.looksLikeNameList(text)).toBe(true);
+  });
+
+  test('does not flag normal prose', () => {
+    const text = 'Ceuta, Spain, and Fnideq, Morocco, are only a mile apart but they are intertwined by family and trade.';
+    expect(fns.looksLikeNameList(text)).toBe(false);
+  });
+
+  test('does not flag short bullet runs (breadcrumbs)', () => {
+    expect(fns.looksLikeNameList('Home • Products • Pricing')).toBe(false);
+  });
+});
+
+// ─── v1.12.0：仅显示译文模式 ────────────────────────────────────────────────
+
+describe('displayMode replace', () => {
+  afterEach(() => fns.setDisplayMode('bilingual'));
+
+  test('hides the original into a wrapper and shows only the translation', () => {
+    fns.setDisplayMode('replace');
+    const p = document.createElement('p');
+    const a = document.createElement('a');
+    a.href = 'https://example.com';
+    a.textContent = 'Original text';
+    p.appendChild(a);
+    document.body.appendChild(p);
+
+    fns.injectTranslation(p, '译文内容');
+
+    const wrap = p.querySelector('[data-yll-orig]');
+    expect(wrap).not.toBeNull();
+    expect(wrap.className).toBe('yll-orig-hidden');
+    expect(wrap.querySelector('a')).not.toBeNull(); // 原文节点结构保留
+    const tr = p.querySelector('[data-yll-inject]');
+    expect(tr.textContent).toBe('译文内容');
+    p.remove();
+  });
+
+  test('removeTranslations restores the original DOM exactly', () => {
+    fns.setDisplayMode('replace');
+    const h2 = document.createElement('h2');
+    h2.textContent = 'Machine translation';
+    document.body.appendChild(h2);
+
+    fns.injectTranslation(h2, '机器翻译');
+    fns.removeTranslations();
+
+    expect(h2.querySelector('[data-yll-orig]')).toBeNull();
+    expect(h2.querySelector('[data-yll-inject]')).toBeNull();
+    expect(h2.textContent).toBe('Machine translation');
+    expect(h2.dataset.yllDone).toBeUndefined();
+    h2.remove();
+  });
+
+  test('bilingual mode is unchanged (translation appended after)', () => {
+    const p = document.createElement('p');
+    p.textContent = 'Hello world paragraph';
+    document.body.appendChild(p);
+    fns.injectTranslation(p, '你好世界');
+    expect(p.querySelector('[data-yll-orig]')).toBeNull();
+    expect(p.nextElementSibling && p.nextElementSibling.className).toContain('yll-tr');
+    p.nextElementSibling.remove();
+    p.remove();
+  });
+});

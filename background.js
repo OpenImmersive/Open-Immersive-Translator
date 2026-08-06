@@ -128,7 +128,10 @@ async function translate({ text, engine, targetLang, sourceLang = 'auto' }) {
 const OI_SITE = 'https://openimmersive.ai';
 
 async function translateViaSite(text, targetLang, sourceLang, tier) {
-  const resp = await fetch(`${OI_SITE}/api/translate`, {
+  // oiSiteBase：内部测试用的官网地址覆盖（正式发布不暴露 UI，storage 手工写入）
+  const { oiSiteBase } = await storageGet(['oiSiteBase']);
+  const site = oiSiteBase || OI_SITE;
+  const resp = await fetch(`${site}/api/translate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
@@ -144,10 +147,14 @@ async function translateViaSite(text, targetLang, sourceLang, tier) {
   try { data = await resp.json(); } catch (_) { /* 非 JSON 走下面的状态码分支 */ }
 
   if (resp.status === 401) {
-    throw new Error(`需要登录 ${OI_SITE} 才能使用 AI 翻译档（免费的 Google 档无需登录）`);
+    throw new Error(`需要登录 ${site} 才能使用 AI 翻译档（免费的 Google 档无需登录）`);
   }
   if (resp.status === 402) {
-    throw new Error(`额度不足，请到 ${OI_SITE} 充值或订阅`);
+    throw new Error(`额度不足，请到 ${site} 充值或订阅`);
+  }
+  if (resp.status === 404) {
+    // 官网新版（带账号/额度）尚未切到正式域名时，接口整个不存在
+    throw new Error('AI 翻译档即将上线，暂请使用免费的 Google 档');
   }
   if (!resp.ok) {
     throw new Error((data.error && data.error.message) || `官网接口返回 ${resp.status}`);

@@ -101,8 +101,40 @@ function setStorage(items) {
   return new Promise(resolve => chrome.storage.local.set(items, resolve));
 }
 
+// ===== OpenImmersive 账号区 =====
+
+let oiSiteUrl = 'https://openimmersive.ai';
+
+async function refreshOiAccount() {
+  const el = document.getElementById('oiAcctStatus');
+  el.textContent = '查询中…';
+  try {
+    const resp = await api.runtime.sendMessage({ type: 'oiAuthStatus' });
+    if (!resp || !resp.success) throw new Error(resp ? resp.error : '通信错误');
+    if (resp.site) oiSiteUrl = resp.site;
+    if (!resp.available) {
+      el.textContent = 'AI 翻译档即将上线，敬请期待（免费 Google 档不受影响）';
+      return;
+    }
+    if (!resp.user) {
+      el.textContent = '未登录 —— 点「登录 / 注册」在官网完成登录后回来刷新';
+      return;
+    }
+    const u = resp.user;
+    el.textContent = `已登录：${u.email} · 套餐 ${u.plan || 'free'} · 余额 ${u.credits ?? 0} credits`;
+  } catch (err) {
+    el.textContent = `状态查询失败：${err.message}`;
+  }
+}
+
+document.getElementById('btnOiLogin').addEventListener('click', () => {
+  window.open(oiSiteUrl, '_blank');
+});
+document.getElementById('btnOiRefresh').addEventListener('click', refreshOiAccount);
+
 // ===== 启动 =====
 loadSettings().catch(console.error);
+refreshOiAccount().catch(() => {});
 
 // ===== 文件翻译：本地解析简单文本格式，逐段送翻译，原格式下载 =====
 // 文件内容不上传到任何我们的服务器——只有拆出来的文字片段走用户选定的引擎，

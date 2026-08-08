@@ -527,3 +527,36 @@ describe('openOptions message', () => {
     expect(() => ctx.__listeners.message({ type: 'openOptions' }, {}, () => {})).not.toThrow();
   });
 });
+
+// ─── oiAuthStatus（v1.13.0 账号区）────────────────────────────────────────────
+
+describe('oiAuthStatus', () => {
+  test('404 means the site tier is not deployed yet', async () => {
+    const ctx = loadBg({ fetchImpl: () => Promise.resolve({ status: 404, json: () => Promise.resolve({}) }) });
+    const r = await ctx.oiAuthStatus();
+    expect(r.success).toBe(true);
+    expect(r.available).toBe(false);
+    expect(r.user).toBeNull();
+  });
+
+  test('logged-in user passes through with site url', async () => {
+    const user = { email: 'paytest@openimmersive.ai', plan: 'free', credits: 99990 };
+    const ctx = loadBg({ fetchImpl: () => Promise.resolve({ status: 200, ok: true, json: () => Promise.resolve({ user }) }) });
+    const r = await ctx.oiAuthStatus();
+    expect(r.available).toBe(true);
+    expect(r.user).toEqual(user);
+    expect(r.site).toBe('https://openimmersive.ai');
+  });
+
+  test('oiSiteBase override changes the queried site', async () => {
+    let calledUrl = '';
+    const ctx = loadBg({
+      storageData: { oiSiteBase: 'http://preview.test:8091' },
+      fetchImpl: (url) => { calledUrl = String(url); return Promise.resolve({ status: 401, json: () => Promise.resolve({ error: 'x' }) }); },
+    });
+    const r = await ctx.oiAuthStatus();
+    expect(calledUrl).toContain('http://preview.test:8091/api/auth/me');
+    expect(r.available).toBe(true);
+    expect(r.user).toBeNull(); // 未登录
+  });
+});

@@ -85,7 +85,26 @@ api.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (api.runtime.openOptionsPage) api.runtime.openOptionsPage();
     return false;
   }
+
+  // 设置页的账号区：查询官网登录状态（cookie 随请求自动带上，插件不存凭据）
+  if (message.type === 'oiAuthStatus') {
+    oiAuthStatus()
+      .then(sendResponse)
+      .catch(err => sendResponse({ success: false, error: err.message }));
+    return true;
+  }
 });
+
+// 官网会员状态。404 = 新站尚未部署到该地址（AI 档即将上线的同一状态）。
+async function oiAuthStatus() {
+  const { oiSiteBase } = await storageGet(['oiSiteBase']);
+  const site = oiSiteBase || OI_SITE;
+  const resp = await fetch(`${site}/api/auth/me`, { credentials: 'include' });
+  if (resp.status === 404) return { success: true, site, available: false, user: null };
+  let data = {};
+  try { data = await resp.json(); } catch (_) { /* 非 JSON 视作未登录 */ }
+  return { success: true, site, available: true, user: (data && data.user) || null };
+}
 
 // ===== 翻译入口 =====
 
